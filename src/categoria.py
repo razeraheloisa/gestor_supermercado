@@ -15,10 +15,10 @@ categorias = {}
 def criar_categoria(nome_categoria, descricao):
     if not nome_categoria.strip():
         print("Erro: o nome da categoria não pode estar vazio.")
-        return
+        return "Nome Vazio"
     if not descricao.strip():
         print("Erro: a descrição não pode estar vazia.")
-        return
+        return "Descricao Vazia"
 
     # verificar se já existe categoria com o mesmo nome
     for dados in categorias.values():
