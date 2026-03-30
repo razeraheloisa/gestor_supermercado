@@ -11,35 +11,44 @@ from utils import gerar_id_produto, validar_preco, validar_quantidade, validar_p
 produtos = {}
 
 
+def _erro(codigo_http, mensagem):
+    """Imprime uma mensagem de erro formatada com o código HTTP correspondente."""
+    print(f"[{codigo_http}] Erro: {mensagem}")
+
+
 # CREATE
 def criar_produto(nome, preco_texto, quantidade_texto, id_categoria, peso_texto):
     from categoria import categoria_existe, categorias
 
     if not nome.strip():
-        print("Erro: o nome do produto não pode estar vazio.")
+        _erro(400, "o nome do produto não pode estar vazio.")
         return
 
     if not validar_preco(preco_texto):
-        print("Erro: preço inválido. Introduza um número positivo (ex: 1.99).")
+        _erro(400, "preço inválido. Introduza um número positivo (ex: 1.99).")
         return
 
     if not validar_quantidade(quantidade_texto):
-        print("Erro: quantidade inválida. Introduza um número inteiro não negativo.")
+        _erro(400, "quantidade inválida. Introduza um número inteiro não negativo.")
         return
 
     if not categoria_existe(id_categoria):
-        print(f"Erro: categoria '{id_categoria}' não encontrada.")
+        _erro(404, f"categoria '{id_categoria}' não encontrada.")
         return
 
     if not validar_peso(peso_texto):
-        print("Erro: peso inválido. Introduza um número positivo (ex: 0.5).")
+        _erro(400, "peso inválido. Introduza um número positivo (ex: 0.5).")
         return
 
-    # TODO: falta guardar o produto no dicionário produtos
-    # O id deve ser gerado com gerar_id_produto()
-    # O dicionário deve ter as chaves: nome, preco, quantidade_stock, id_categoria, peso
-    # Atenção: preco deve ser float, quantidade_stock deve ser int, peso deve ser float
-    # No final imprime: "Produto criado com sucesso. ID: <id>"
+    id_produto = gerar_id_produto()
+    produtos[id_produto] = {
+        "nome": nome.strip(),
+        "preco": float(preco_texto),
+        "quantidade_stock": int(quantidade_texto),
+        "id_categoria": id_categoria,
+        "peso": float(peso_texto)
+    }
+    print(f"[201] Produto criado com sucesso. ID: {id_produto}")
 
 
 # READ (listar todos)
@@ -47,7 +56,7 @@ def listar_produtos():
     from categoria import categorias
 
     if not produtos:
-        print("Não existem produtos registados.")
+        _erro(404, "não existem produtos registados.")
         return
 
     print("\n{:<8} {:<22} {:<10} {:<10} {:<10} {:<10}".format(
@@ -71,14 +80,14 @@ def listar_produtos_por_categoria(id_categoria):
     from categoria import categoria_existe, categorias
 
     if not categoria_existe(id_categoria):
-        print(f"Categoria '{id_categoria}' não encontrada.")
+        _erro(404, f"categoria '{id_categoria}' não encontrada.")
         return
 
     nome_cat = categorias[id_categoria]["nome_categoria"]
     encontrados = {pid: d for pid, d in produtos.items() if d["id_categoria"] == id_categoria}
 
     if not encontrados:
-        print(f"Não existem produtos na categoria '{nome_cat}'.")
+        _erro(404, f"não existem produtos na categoria '{nome_cat}'.")
         return
 
     print(f"\n--- Produtos da categoria: {nome_cat} ---")
@@ -99,7 +108,7 @@ def consultar_produto(id_produto):
     from categoria import categorias
 
     if id_produto not in produtos:
-        print("Produto não encontrado.")
+        _erro(404, f"produto '{id_produto}' não encontrado.")
         return
 
     dados = produtos[id_produto]
@@ -118,7 +127,7 @@ def atualizar_produto(id_produto, nome=None, preco_texto=None, quantidade_texto=
     from categoria import categoria_existe
 
     if id_produto not in produtos:
-        print("Produto não encontrado.")
+        _erro(404, f"produto '{id_produto}' não encontrado.")
         return
 
     if nome:
@@ -126,24 +135,35 @@ def atualizar_produto(id_produto, nome=None, preco_texto=None, quantidade_texto=
 
     if preco_texto:
         if not validar_preco(preco_texto):
-            print("Erro: preço inválido.")
+            _erro(400, "preço inválido.")
             return
         produtos[id_produto]["preco"] = float(preco_texto)
 
-    #
-    # Segue o mesmo padrão dos blocos nome e preco_texto acima:
-    #   - verifica se o valor foi passado (not None)
-    #   - valida com a função correspondente (validar_quantidade, categoria_existe, validar_peso)
-    #   - se inválido, imprime erro e termina (return)
-    #   - se válido, atualiza o campo no dicionário produtos
+    if quantidade_texto:
+        if not validar_quantidade(quantidade_texto):
+            _erro(400, "quantidade inválida.")
+            return
+        produtos[id_produto]["quantidade_stock"] = int(quantidade_texto)
 
-    print("Produto atualizado com sucesso.")
+    if id_categoria:
+        if not categoria_existe(id_categoria):
+            _erro(404, f"categoria '{id_categoria}' não encontrada.")
+            return
+        produtos[id_produto]["id_categoria"] = id_categoria
+
+    if peso_texto:
+        if not validar_peso(peso_texto):
+            _erro(400, "peso inválido.")
+            return
+        produtos[id_produto]["peso"] = float(peso_texto)
+
+    print("[200] Produto atualizado com sucesso.")
 
 
 # DELETE
 def remover_produto(id_produto):
     if id_produto not in produtos:
-        print("Produto não encontrado.")
+        _erro(404, f"produto '{id_produto}' não encontrado.")
         return
     del produtos[id_produto]
-    print("Produto removido com sucesso.")
+    print("[200] Produto removido com sucesso.")

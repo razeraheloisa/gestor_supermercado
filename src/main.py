@@ -6,6 +6,7 @@
 
 from categoria import (
     criar_categoria,
+    listar_categorias,
     consultar_categoria,
     atualizar_categoria,
     remover_categoria
@@ -18,6 +19,10 @@ from produto import (
     remover_produto,
     listar_produtos_por_categoria
 )
+
+
+def _erro(codigo_http, mensagem):
+    print(f"[{codigo_http}] Erro: {mensagem}")
 
 
 # ---- menus ----
@@ -35,6 +40,7 @@ def menu_principal():
 def menu_categorias():
     print("\n===== MENU CATEGORIAS =====")
     print("1 - Criar categoria")
+    print("2 - Listar categorias")
     print("3 - Consultar categoria")
     print("4 - Atualizar categoria")
     print("5 - Remover categoria")
@@ -64,7 +70,8 @@ def submenu_categorias():
             descricao = input("Descrição: ")
             criar_categoria(nome_categoria, descricao)
 
-
+        elif opcao == "2":
+            listar_categorias()
 
         elif opcao == "3":
             id_categoria = input("ID da categoria: ").upper()
@@ -88,7 +95,7 @@ def submenu_categorias():
             break
 
         else:
-            print("Opção inválida.")
+            _erro(400, f"opção '{opcao}' inválida. Escolha uma opção entre 0 e 5.")
 
 
 # ---- submenu produtos ----
@@ -142,7 +149,7 @@ def submenu_produtos():
             break
 
         else:
-            print("Opção inválida.")
+            _erro(400, f"opção '{opcao}' inválida. Escolha uma opção entre 0 e 6.")
 
 
 # ---- programa principal ----
@@ -163,7 +170,7 @@ def main():
             break
 
         else:
-            print("Opção inválida.")
+            _erro(400, f"opção '{opcao}' inválida. Escolha uma opção entre 0 e 2.")
 
 
 if __name__ == "__main__":

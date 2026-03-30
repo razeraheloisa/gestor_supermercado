@@ -16,10 +16,10 @@ def gerar_id_produto():
 
 
 def gerar_id_categoria():
-    # TODO: implementa esta função
-    # Deve funcionar exatamente como gerar_id_produto()
-    # mas usando contador_categorias e o prefixo "C"
-    pass
+    global contador_categorias
+    novo_id = f"C{contador_categorias:03d}"
+    contador_categorias += 1
+    return novo_id
 
 
 def validar_preco(valor_texto):
@@ -32,10 +32,12 @@ def validar_preco(valor_texto):
 
 
 def validar_quantidade(valor_texto):
-    # TODO: implementa esta função
-    # Deve tentar converter valor_texto para int
-    # Retorna True se for inteiro e >= 0, False caso contrário
-    pass
+    """Valida se o valor introduzido é um número inteiro não negativo."""
+    try:
+        valor = int(valor_texto)
+        return valor >= 0
+    except ValueError:
+        return False
 
 
 def validar_peso(valor_texto):
