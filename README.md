@@ -1,5 +1,3 @@
-# gestor_supermercado
-Repósitorio para o gestor de supermercado
 # 🛒 Gestor de Supermercado
 
 Sistema de gestão de supermercado em Python com interface de terminal, que permite gerir **categorias** e **produtos** através de um menu interativo com operações CRUD completas.
