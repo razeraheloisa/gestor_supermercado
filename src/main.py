@@ -118,7 +118,9 @@ def submenu_produtos():
 
         elif opcao == "3":
             id_categoria = input("ID da categoria: ").upper()
-            listar_produtos_por_categoria(id_categoria)
+            codigo, resultado = listar_produtos_por_categoria(id_categoria)
+            if codigo != 200:
+                _erro(codigo, resultado)
 
         elif opcao == "4":
             id_produto = input("ID do produto: ").upper()
