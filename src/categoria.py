@@ -39,7 +39,7 @@ def criar_categoria(nome_categoria, descricao):
     }
     categorias[id_categoria] = categoria
 
-    return 201, "categoria criada"
+    return 201, categoria
 
 # READ (listar todas)
 def listar_categorias():
