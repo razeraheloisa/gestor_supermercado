@@ -18,26 +18,21 @@ def _erro(codigo_http, mensagem):
 
 # CREATE
 def criar_produto(nome, preco_texto, quantidade_texto, id_categoria, peso_texto):
-    from categoria import categoria_existe, categorias
+    from categoria import categoria_existe
 
     if not nome.strip():
-     
         return 400, "o nome do produto não pode estar vazio."
 
     if not validar_preco(preco_texto):
-      
         return 400, "preço inválido. Introduza um número positivo (ex: 1.99)."
 
     if not validar_quantidade(quantidade_texto):
-       
         return 400, "quantidade inválida. Introduza um número inteiro não negativo."
 
     if not categoria_existe(id_categoria):
-        
         return 404, f"categoria '{id_categoria}' não encontrada."
 
     if not validar_peso(peso_texto):
-     
         return 400, "peso inválido. Introduza um número positivo (ex: 0.5)."
 
     id_produto = gerar_id_produto()
@@ -48,7 +43,7 @@ def criar_produto(nome, preco_texto, quantidade_texto, id_categoria, peso_texto)
         "id_categoria": id_categoria,
         "peso": float(peso_texto)
     }
-        return f"201] Produto criado com sucesso. ID: {id_produto}"
+    return 201, f"Produto criado com sucesso. ID: {id_produto}"
 
 
 # READ (listar todos)
@@ -56,7 +51,6 @@ def listar_produtos():
     from categoria import categorias
 
     if not produtos:
-        
         return 404, "não existem produtos registados."
 
     print("\n{:<8} {:<22} {:<10} {:<10} {:<10} {:<10}".format(
@@ -80,15 +74,27 @@ def listar_produtos_por_categoria(id_categoria):
     from categoria import categoria_existe, categorias
 
     if not categoria_existe(id_categoria):
-        
         return 404, f"categoria '{id_categoria}' não encontrada."
 
     nome_cat = categorias[id_categoria]["nome_categoria"]
     encontrados = {pid: d for pid, d in produtos.items() if d["id_categoria"] == id_categoria}
 
     if not encontrados:
-        
         return 404, f"não existem produtos na categoria '{nome_cat}'."
+
+    print(f"\n--- Produtos na categoria: {nome_cat} ---")
+    print("\n{:<8} {:<22} {:<10} {:<10} {:<10}".format(
+        "ID", "Nome", "Preço (€)", "Stock", "Peso (kg)"
+    ))
+    print("-" * 65)
+    for id_produto, dados in encontrados.items():
+        print("{:<8} {:<22} {:<10.2f} {:<10} {:<10.3f}".format(
+            id_produto,
+            dados["nome"],
+            dados["preco"],
+            dados["quantidade_stock"],
+            dados["peso"]
+        ))
 
 
 # READ (consultar individual)
@@ -111,47 +117,50 @@ def consultar_produto(id_produto):
 
 
 # UPDATE
-def atualizar_produto(id_produto, nome=None, preco_texto=None, quantidade_texto=None, id_categoria=None, peso_texto=None):
+def atualizar_produto(id_produto, nome=None, preco_texto=None, quantidade_texto=None, id_categoria=None,
+                      peso_texto=None):
     from categoria import categoria_existe
 
     if id_produto not in produtos:
-        _erro(404, f"produto '{id_produto}' não encontrado.")
-        return
+        return 404, f"produto '{id_produto}' não encontrado."
 
-    if nome:
+    if nome is not None:
+        if not nome.strip():
+            return 400, "o nome não pode estar vazio."
         produtos[id_produto]["nome"] = nome.strip()
 
-    if preco_texto:
+    if preco_texto is not None:
         if not validar_preco(preco_texto):
-            _erro(400, "preço inválido.")
-            return
+            return 400, "preço inválido. Introduza um número positivo."
         produtos[id_produto]["preco"] = float(preco_texto)
 
-    if quantidade_texto:
+    if quantidade_texto is not None:
         if not validar_quantidade(quantidade_texto):
-            _erro(400, "quantidade inválida.")
-            return
+            return 400, "quantidade inválida. Introduza um número inteiro não negativo."
         produtos[id_produto]["quantidade_stock"] = int(quantidade_texto)
 
-    if id_categoria:
+    if id_categoria is not None:
         if not categoria_existe(id_categoria):
-            _erro(404, f"categoria '{id_categoria}' não encontrada.")
-            return
+            return 404, f"categoria '{id_categoria}' não encontrada."
         produtos[id_produto]["id_categoria"] = id_categoria
 
-    if peso_texto:
+    if peso_texto is not None:
         if not validar_peso(peso_texto):
-            _erro(400, "peso inválido.")
-            return
+            return 400, "peso inválido. Introduza um número positivo."
         produtos[id_produto]["peso"] = float(peso_texto)
 
-    print("[200] Produto atualizado com sucesso.")
+    return 200, "produto atualizado com sucesso."
 
 
 # DELETE
 def remover_produto(id_produto):
     if id_produto not in produtos:
-        _erro(404, f"produto '{id_produto}' não encontrado.")
-        return
+        return 404, f"produto '{id_produto}' não encontrado."
+
     del produtos[id_produto]
-    print("[200] Produto removido com sucesso.")
+    return 200, "produto removido com sucesso."
+
+
+def produto_existe(id_produto):
+    """Verifica se um produto existe."""
+    return id_produto in produtos
