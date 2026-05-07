@@ -239,7 +239,12 @@ def menu_compra():
         if opcao == "1":
             id_cli = input("ID do cliente: ").strip()
             id_sup = input("ID do supermercado: ").strip()
-            data = input("Data (DD/MM/AAAA): ")
+            while True:
+                data = input("Data (DD/MM/AAAA): ").strip()
+                partes = data.replace("/", "")
+                if len(data) == 10 and data[2] == "/" and data[5] == "/" and partes.isdigit():
+                    break
+                print("Formato inválido. Introduza apenas números no formato DD/MM/AAAA (ex: 25/04/2025).")
             valor = input("Valor total (ex: 25.50): ")
             responder(compra.criar_compra(id_cli, id_sup, data, valor))
 
