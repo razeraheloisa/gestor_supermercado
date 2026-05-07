@@ -1,32 +1,37 @@
 # ==============================
 # main.py
-# Menu principal do sistema
+# Menu principal da aplicação
+# Apenas chama funções dos módulos
+# e apresenta resultados ao utilizador
 # ==============================
 
-from categoria import criar_categoria, listar_categorias, consultar_categoria, atualizar_categoria, remover_categoria
-from produto import criar_produto, listar_produtos, listar_produtos_por_categoria, consultar_produto, atualizar_produto, remover_produto
-from cliente import criar_cliente, listar_clientes, consultar_cliente, pesquisar_cliente, atualizar_cliente, remover_cliente
-from supermercado import criar_supermercado, listar_supermercados, consultar_supermercado, atualizar_supermercado, remover_supermercado
-from compra import criar_compra, listar_compras, listar_compras_por_cliente, listar_compras_por_supermercado, consultar_compra, atualizar_compra, remover_compra
+import categoria
+import produto
+import cliente
+import supermercado
+import compra
 
 
-def _mostrar_resultado(resultado):
-    """Interpreta e imprime o retorno (codigo, mensagem) das funções CRUD."""
+def responder(resultado):
+    """Recebe o tuplo (codigo, mensagem) devolvido pelas funções e imprime o resultado."""
     if resultado is None:
         return
-    if isinstance(resultado, tuple):
-        codigo, mensagem = resultado
-        prefixo = "OK" if codigo in (200, 201) else "Erro"
-        print(f"[{codigo}] {prefixo}: {mensagem}")
+    codigo, mensagem = resultado
+    if not mensagem:
+        return
+    if codigo >= 400:
+        print(f"[ERRO {codigo}] {mensagem}")
+    else:
+        print(f"[{codigo}] {mensagem}")
 
 
 # ==============================
 # MENUS DE CATEGORIA
 # ==============================
 
-def menu_categorias():
+def menu_categoria():
     while True:
-        print("\n========== CATEGORIAS ==========")
+        print("\n===== CATEGORIAS =====")
         print("1. Criar categoria")
         print("2. Listar categorias")
         print("3. Consultar categoria")
@@ -37,26 +42,25 @@ def menu_categorias():
 
         if opcao == "1":
             nome = input("Nome da categoria: ")
-            descricao = input("Descrição: ")
-            _mostrar_resultado(criar_categoria(nome, descricao))
+            desc = input("Descrição: ")
+            responder(categoria.criar_categoria(nome, desc))
 
         elif opcao == "2":
-            _mostrar_resultado(listar_categorias())
+            responder(categoria.listar_categorias())
 
         elif opcao == "3":
             id_cat = input("ID da categoria: ").strip()
-            consultar_categoria(id_cat)
+            responder(categoria.consultar_categoria(id_cat))
 
         elif opcao == "4":
             id_cat = input("ID da categoria: ").strip()
-            print("(Deixe em branco para não alterar)")
-            nome = input("Novo nome: ").strip() or None
-            descricao = input("Nova descrição: ").strip() or None
-            _mostrar_resultado(atualizar_categoria(id_cat, nome, descricao))
+            nome = input("Novo nome (Enter para manter): ").strip() or None
+            desc = input("Nova descrição (Enter para manter): ").strip() or None
+            responder(categoria.atualizar_categoria(id_cat, nome, desc))
 
         elif opcao == "5":
             id_cat = input("ID da categoria: ").strip()
-            _mostrar_resultado(remover_categoria(id_cat))
+            responder(categoria.remover_categoria(id_cat))
 
         elif opcao == "0":
             break
@@ -68,11 +72,11 @@ def menu_categorias():
 # MENUS DE PRODUTO
 # ==============================
 
-def menu_produtos():
+def menu_produto():
     while True:
-        print("\n========== PRODUTOS ==========")
+        print("\n===== PRODUTOS =====")
         print("1. Criar produto")
-        print("2. Listar todos os produtos")
+        print("2. Listar produtos")
         print("3. Listar produtos por categoria")
         print("4. Consultar produto")
         print("5. Atualizar produto")
@@ -82,36 +86,35 @@ def menu_produtos():
 
         if opcao == "1":
             nome = input("Nome do produto: ")
-            preco = input("Preço (€): ")
-            quantidade = input("Quantidade em stock: ")
+            preco = input("Preço (ex: 1.99): ")
+            qtd = input("Quantidade em stock: ")
             id_cat = input("ID da categoria: ").strip()
-            peso = input("Peso (kg): ")
-            _mostrar_resultado(criar_produto(nome, preco, quantidade, id_cat, peso))
+            peso = input("Peso em kg (ex: 0.5): ")
+            responder(produto.criar_produto(nome, preco, qtd, id_cat, peso))
 
         elif opcao == "2":
-            _mostrar_resultado(listar_produtos())
+            responder(produto.listar_produtos())
 
         elif opcao == "3":
             id_cat = input("ID da categoria: ").strip()
-            _mostrar_resultado(listar_produtos_por_categoria(id_cat))
+            responder(produto.listar_produtos_por_categoria(id_cat))
 
         elif opcao == "4":
             id_prod = input("ID do produto: ").strip()
-            consultar_produto(id_prod)
+            responder(produto.consultar_produto(id_prod))
 
         elif opcao == "5":
             id_prod = input("ID do produto: ").strip()
-            print("(Deixe em branco para não alterar)")
-            nome = input("Novo nome: ").strip() or None
-            preco = input("Novo preço (€): ").strip() or None
-            quantidade = input("Nova quantidade: ").strip() or None
-            id_cat = input("Novo ID de categoria: ").strip() or None
-            peso = input("Novo peso (kg): ").strip() or None
-            _mostrar_resultado(atualizar_produto(id_prod, nome, preco, quantidade, id_cat, peso))
+            nome = input("Novo nome (Enter para manter): ").strip() or None
+            preco = input("Novo preço (Enter para manter): ").strip() or None
+            qtd = input("Nova quantidade (Enter para manter): ").strip() or None
+            id_cat = input("Nova categoria (Enter para manter): ").strip() or None
+            peso = input("Novo peso (Enter para manter): ").strip() or None
+            responder(produto.atualizar_produto(id_prod, nome, preco, qtd, id_cat, peso))
 
         elif opcao == "6":
             id_prod = input("ID do produto: ").strip()
-            _mostrar_resultado(remover_produto(id_prod))
+            responder(produto.remover_produto(id_prod))
 
         elif opcao == "0":
             break
@@ -123,13 +126,13 @@ def menu_produtos():
 # MENUS DE CLIENTE
 # ==============================
 
-def menu_clientes():
+def menu_cliente():
     while True:
-        print("\n========== CLIENTES ==========")
+        print("\n===== CLIENTES =====")
         print("1. Criar cliente")
         print("2. Listar clientes")
         print("3. Consultar cliente")
-        print("4. Pesquisar cliente (nome ou NIF)")
+        print("4. Pesquisar cliente")
         print("5. Atualizar cliente")
         print("6. Remover cliente")
         print("0. Voltar")
@@ -138,33 +141,32 @@ def menu_clientes():
         if opcao == "1":
             nome = input("Nome: ")
             contacto = input("Contacto (9 dígitos): ")
-            email = input("Email (opcional): ")
-            nif = input("NIF (opcional): ")
-            _mostrar_resultado(criar_cliente(nome, contacto, email, nif))
+            email = input("Email (opcional, Enter para saltar): ")
+            nif = input("NIF (opcional, Enter para saltar): ")
+            responder(cliente.criar_cliente(nome, contacto, email, nif))
 
         elif opcao == "2":
-            _mostrar_resultado(listar_clientes())
+            responder(cliente.listar_clientes())
 
         elif opcao == "3":
-            id_cl = input("ID do cliente: ").strip()
-            consultar_cliente(id_cl)
+            id_cli = input("ID do cliente: ").strip()
+            responder(cliente.consultar_cliente(id_cli))
 
         elif opcao == "4":
             termo = input("Nome ou NIF a pesquisar: ")
-            _mostrar_resultado(pesquisar_cliente(termo))
+            responder(cliente.pesquisar_cliente(termo))
 
         elif opcao == "5":
-            id_cl = input("ID do cliente: ").strip()
-            print("(Deixe em branco para não alterar)")
-            nome = input("Novo nome: ").strip() or None
-            contacto = input("Novo contacto: ").strip() or None
-            email = input("Novo email: ").strip() or None
-            nif = input("Novo NIF: ").strip() or None
-            _mostrar_resultado(atualizar_cliente(id_cl, nome, contacto, email, nif))
+            id_cli = input("ID do cliente: ").strip()
+            nome = input("Novo nome (Enter para manter): ").strip() or None
+            contacto = input("Novo contacto (Enter para manter): ").strip() or None
+            email = input("Novo email (Enter para manter): ").strip() or None
+            nif = input("Novo NIF (Enter para manter): ").strip() or None
+            responder(cliente.atualizar_cliente(id_cli, nome, contacto, email, nif))
 
         elif opcao == "6":
-            id_cl = input("ID do cliente: ").strip()
-            _mostrar_resultado(remover_cliente(id_cl))
+            id_cli = input("ID do cliente: ").strip()
+            responder(cliente.remover_cliente(id_cli))
 
         elif opcao == "0":
             break
@@ -176,9 +178,9 @@ def menu_clientes():
 # MENUS DE SUPERMERCADO
 # ==============================
 
-def menu_supermercados():
+def menu_supermercado():
     while True:
-        print("\n========== SUPERMERCADOS ==========")
+        print("\n===== SUPERMERCADOS =====")
         print("1. Criar supermercado")
         print("2. Listar supermercados")
         print("3. Consultar supermercado")
@@ -190,27 +192,26 @@ def menu_supermercados():
         if opcao == "1":
             numero = input("Número do supermercado: ")
             morada = input("Morada: ")
-            nif = input("NIF: ")
-            _mostrar_resultado(criar_supermercado(numero, morada, nif))
+            nif = input("NIF (9 dígitos): ")
+            responder(supermercado.criar_supermercado(numero, morada, nif))
 
         elif opcao == "2":
-            _mostrar_resultado(listar_supermercados())
+            responder(supermercado.listar_supermercados())
 
         elif opcao == "3":
             id_sup = input("ID do supermercado: ").strip()
-            consultar_supermercado(id_sup)
+            responder(supermercado.consultar_supermercado(id_sup))
 
         elif opcao == "4":
             id_sup = input("ID do supermercado: ").strip()
-            print("(Deixe em branco para não alterar)")
-            numero = input("Novo número: ").strip() or None
-            morada = input("Nova morada: ").strip() or None
-            nif = input("Novo NIF: ").strip() or None
-            _mostrar_resultado(atualizar_supermercado(id_sup, numero, morada, nif))
+            numero = input("Novo número (Enter para manter): ").strip() or None
+            morada = input("Nova morada (Enter para manter): ").strip() or None
+            nif = input("Novo NIF (Enter para manter): ").strip() or None
+            responder(supermercado.atualizar_supermercado(id_sup, numero, morada, nif))
 
         elif opcao == "5":
             id_sup = input("ID do supermercado: ").strip()
-            _mostrar_resultado(remover_supermercado(id_sup))
+            responder(supermercado.remover_supermercado(id_sup))
 
         elif opcao == "0":
             break
@@ -222,9 +223,9 @@ def menu_supermercados():
 # MENUS DE COMPRA
 # ==============================
 
-def menu_compras():
+def menu_compra():
     while True:
-        print("\n========== COMPRAS ==========")
+        print("\n===== COMPRAS =====")
         print("1. Registar compra")
         print("2. Listar todas as compras")
         print("3. Listar compras por cliente")
@@ -236,37 +237,36 @@ def menu_compras():
         opcao = input("Opção: ").strip()
 
         if opcao == "1":
-            id_cl = input("ID do cliente: ").strip()
+            id_cli = input("ID do cliente: ").strip()
             id_sup = input("ID do supermercado: ").strip()
-            data = input("Data (DD/MM/AAAA): ").strip()
-            valor = input("Valor total (€): ").strip()
-            _mostrar_resultado(criar_compra(id_cl, id_sup, data, valor))
+            data = input("Data (DD/MM/AAAA): ")
+            valor = input("Valor total (ex: 25.50): ")
+            responder(compra.criar_compra(id_cli, id_sup, data, valor))
 
         elif opcao == "2":
-            _mostrar_resultado(listar_compras())
+            responder(compra.listar_compras())
 
         elif opcao == "3":
-            id_cl = input("ID do cliente: ").strip()
-            _mostrar_resultado(listar_compras_por_cliente(id_cl))
+            id_cli = input("ID do cliente: ").strip()
+            responder(compra.listar_compras_por_cliente(id_cli))
 
         elif opcao == "4":
             id_sup = input("ID do supermercado: ").strip()
-            _mostrar_resultado(listar_compras_por_supermercado(id_sup))
+            responder(compra.listar_compras_por_supermercado(id_sup))
 
         elif opcao == "5":
-            id_comp = input("ID da compra: ").strip()
-            consultar_compra(id_comp)
+            id_com = input("ID da compra: ").strip()
+            responder(compra.consultar_compra(id_com))
 
         elif opcao == "6":
-            id_comp = input("ID da compra: ").strip()
-            print("(Deixe em branco para não alterar)")
-            data = input("Nova data (DD/MM/AAAA): ").strip() or None
-            valor = input("Novo valor total (€): ").strip() or None
-            _mostrar_resultado(atualizar_compra(id_comp, data, valor))
+            id_com = input("ID da compra: ").strip()
+            data = input("Nova data (Enter para manter): ").strip() or None
+            valor = input("Novo valor total (Enter para manter): ").strip() or None
+            responder(compra.atualizar_compra(id_com, data, valor))
 
         elif opcao == "7":
-            id_comp = input("ID da compra: ").strip()
-            _mostrar_resultado(remover_compra(id_comp))
+            id_com = input("ID da compra: ").strip()
+            responder(compra.remover_compra(id_com))
 
         elif opcao == "0":
             break
@@ -280,9 +280,9 @@ def menu_compras():
 
 def menu_principal():
     while True:
-        print("\n========================================")
-        print("     SISTEMA DE GESTÃO - SUPERMERCADO   ")
-        print("========================================")
+        print("\n=============================")
+        print("   SISTEMA DE SUPERMERCADO   ")
+        print("=============================")
         print("1. Categorias")
         print("2. Produtos")
         print("3. Clientes")
@@ -292,17 +292,17 @@ def menu_principal():
         opcao = input("Opção: ").strip()
 
         if opcao == "1":
-            menu_categorias()
+            menu_categoria()
         elif opcao == "2":
-            menu_produtos()
+            menu_produto()
         elif opcao == "3":
-            menu_clientes()
+            menu_cliente()
         elif opcao == "4":
-            menu_supermercados()
+            menu_supermercado()
         elif opcao == "5":
-            menu_compras()
+            menu_compra()
         elif opcao == "0":
-            print("A sair... Até logo!")
+            print("Até logo!")
             break
         else:
             print("Opção inválida.")
