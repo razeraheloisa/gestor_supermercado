@@ -7,8 +7,31 @@
 # ==============================
 
 from utils import gerar_id_cliente, validar_contacto, validar_email, validar_nif
+import json
+import os
+
 
 clientes = {}
+FICHEIRO_CLIENTES = "compras.json"
+
+# ==============================
+# Persistência
+# ==============================
+
+def guardar_clientes():
+    with open(FICHEIRO_CLIENTES, "w", encoding="utf-8") as ficheiro:
+        json.dump(clientes, ficheiro, indent=4, ensure_ascii=False)
+
+
+def carregar_clientes():
+    global clientes
+
+    if os.path.exists(FICHEIRO_CLIENTES):
+        with open(FICHEIRO_CLIENTES, "r", encoding="utf-8") as ficheiro:
+            clientes = json.load(ficheiro)
+    else:
+        clientes = {}
+
 
 
 # CREATE
