@@ -8,8 +8,31 @@
 
 from utils import gerar_id_produto, validar_preco, validar_quantidade, validar_peso
 
-produtos = {}
 
+import json
+import os
+
+
+produtos = {}
+FICHEIRO_PRODUTOS = "produtos.json"
+
+# ==============================
+# Persistência
+# ==============================
+
+def guardar_produtos():
+    with open(FICHEIRO_PRODUTOS, "w", encoding="utf-8") as ficheiro:
+        json.dump(produtos, ficheiro, indent=4, ensure_ascii=False)
+
+
+def carregar_produtos():
+    global compras
+
+    if os.path.exists(FICHEIRO_PRODUTOS):
+        with open(FICHEIRO_PRODUTOS, "r", encoding="utf-8") as ficheiro:
+            produtos = json.load(ficheiro)
+    else:
+        produtos = {}
 
 # CREATE
 def criar_produto(nome, preco_texto, quantidade_texto, id_categoria, peso_texto):
