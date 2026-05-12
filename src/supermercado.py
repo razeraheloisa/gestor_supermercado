@@ -7,8 +7,31 @@
 # ==============================
 
 from utils import gerar_id_supermercado, validar_nif
+import json
+import os
+
 
 supermercados = {}
+FICHEIRO_SUPERMERCADOS = "supermercado.json"
+
+# ==============================
+# Persistência
+# ==============================
+
+def guardar_supermercado():
+    with open(FICHEIRO_SUPERMERCADOS, "w", encoding="utf-8") as ficheiro:
+        json.dump(supermercados, ficheiro, indent=4, ensure_ascii=False)
+
+
+def carregar_supermercado():
+    global supermercados
+
+    if os.path.exists(FICHEIRO_SUPERMERCADOS):
+        with open(FICHEIRO_SUPERMERCADOS, "r", encoding="utf-8") as ficheiro:
+            supermercado = json.load(ficheiro)
+    else:
+        supermercado = {}
+
 
 
 # CREATE
