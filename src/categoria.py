@@ -7,6 +7,31 @@
 # ==============================
 
 from utils import gerar_id_categoria
+import json
+import os
+
+
+categoria = {}
+FICHEIRO_CATEGORIA = "supermercado.json"
+
+# ==============================
+# Persistência
+# ==============================
+
+def guardar_supermercado():
+    with open(FICHEIRO_CATEGORIA, "w", encoding="utf-8") as ficheiro:
+        json.dump(categoria, ficheiro, indent=4, ensure_ascii=False)
+
+
+def carregar_supermercado():
+    global categoria
+
+    if os.path.exists(FICHEIRO_CATEGORIA):
+        with open(FICHEIRO_CATEGORIA, "r", encoding="utf-8") as ficheiro:
+            categoria = json.load(ficheiro)
+    else:
+        categoria = {}
+
 
 categorias = {}
 
