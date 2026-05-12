@@ -6,10 +6,32 @@
 # validações feitas aqui (não no main)
 # ==============================
 
+
 from utils import gerar_id_compra, validar_preco, validar_data
+import json
+import os
+
 
 compras = {}
+FICHEIRO_COMPRAS = "compras.json"
 
+# ==============================
+# Persistência
+# ==============================
+
+def guardar_compras():
+    with open(FICHEIRO_COMPRAS, "w", encoding="utf-8") as ficheiro:
+        json.dump(compras, ficheiro, indent=4, ensure_ascii=False)
+
+
+def carregar_compras():
+    global compras
+
+    if os.path.exists(FICHEIRO_COMPRAS):
+        with open(FICHEIRO_COMPRAS, "r", encoding="utf-8") as ficheiro:
+            compras = json.load(ficheiro)
+    else:
+        compras = {}
 
 # CREATE
 def criar_compra(id_cliente, id_supermercado, data, valor_total_texto):
