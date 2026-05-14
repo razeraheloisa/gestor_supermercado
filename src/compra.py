@@ -35,6 +35,7 @@ def carregar_compras():
 
 # CREATE
 def criar_compra(id_cliente, id_supermercado, data, valor_total_texto):
+    carregar_compras()
     from cliente import cliente_existe
     from supermercado import supermercado_existe
 
@@ -57,11 +58,13 @@ def criar_compra(id_cliente, id_supermercado, data, valor_total_texto):
         "data": data.strip(),
         "valor_total": float(valor_total_texto)
     }
+    guardar_compras()
     return 201, f"Compra registada com sucesso. ID: {id_compra}"
 
 
 # READ (listar todas)
 def listar_compras():
+    carregar_compras()
     from cliente import clientes
     from supermercado import supermercados
 
@@ -89,6 +92,7 @@ def listar_compras():
 
 # READ (listar compras de um cliente)
 def listar_compras_por_cliente(id_cliente):
+    carregar_compras()
     from cliente import cliente_existe, clientes
     from supermercado import supermercados
 
@@ -115,11 +119,13 @@ def listar_compras_por_cliente(id_cliente):
             dados["data"],
             dados["valor_total"]
         ))
+        guardar_compras()
     return 200, ""
 
 
 # READ (listar compras de um supermercado)
 def listar_compras_por_supermercado(id_supermercado):
+    carregar_compras()
     from supermercado import supermercado_existe, supermercados
     from cliente import clientes
 
@@ -151,6 +157,7 @@ def listar_compras_por_supermercado(id_supermercado):
 
 # READ (consultar individual)
 def consultar_compra(id_compra):
+    carregar_compras()
     from cliente import clientes
     from supermercado import supermercados
 
@@ -173,6 +180,7 @@ def consultar_compra(id_compra):
 
 # UPDATE
 def atualizar_compra(id_compra, data=None, valor_total_texto=None):
+    carregar_compras()
     if id_compra not in compras:
         return 404, f"compra '{id_compra}' não encontrada."
 
@@ -185,16 +193,18 @@ def atualizar_compra(id_compra, data=None, valor_total_texto=None):
         if not validar_preco(valor_total_texto):
             return 400, "valor total inválido. Introduza um número positivo."
         compras[id_compra]["valor_total"] = float(valor_total_texto)
-
+    guardar_compras()
     return 200, "compra atualizada com sucesso."
 
 
 # DELETE
 def remover_compra(id_compra):
+    carregar_compras()
     if id_compra not in compras:
         return 404, f"compra '{id_compra}' não encontrada."
 
     del compras[id_compra]
+    guardar_compras()
     return 200, "compra removida com sucesso."
 
 
