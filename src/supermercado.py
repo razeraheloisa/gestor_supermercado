@@ -61,7 +61,7 @@ def criar_supermercado(numero, morada, nif):
         "nif": nif.strip()
     }
     guardar_supermercado()
-    return 201, f"Supermercado criado com sucesso. ID: {id_supermercado}"
+    return 201,  supermercados[id_supermercado]
 
 
 # READ (listar todos)
@@ -81,7 +81,7 @@ def listar_supermercados():
             dados["morada"],
             dados["nif"]
         ))
-    return 200, ""
+    return 200, supermercados
 
 
 # READ (consultar individual)
@@ -96,7 +96,7 @@ def consultar_supermercado(id_supermercado):
     print(f"Número:  {dados['numero']}")
     print(f"Morada:  {dados['morada']}")
     print(f"NIF:     {dados['nif']}")
-    return 200, ""
+    return 200, supermercados[id_supermercado]
 
 
 # UPDATE
@@ -126,7 +126,7 @@ def atualizar_supermercado(id_supermercado, numero=None, morada=None, nif=None):
                 return 409, f"já existe um supermercado com o NIF '{nif}'."
         supermercados[id_supermercado]["nif"] = nif.strip()
     guardar_supermercado()
-    return 200, "supermercado atualizado com sucesso."
+    return 200, supermercados[id_supermercado]
 
 
 # DELETE
@@ -142,9 +142,10 @@ def remover_supermercado(id_supermercado):
 
     del supermercados[id_supermercado]
     guardar_supermercado()
-    return 200, "supermercado removido com sucesso."
+    return 200, id_supermercado
 
 
 def supermercado_existe(id_supermercado):
+    carregar_supermercado()
     """Verifica se um supermercado existe. Usada por compra.py."""
     return id_supermercado in supermercados

@@ -59,7 +59,7 @@ def criar_compra(id_cliente, id_supermercado, data, valor_total_texto):
         "valor_total": float(valor_total_texto)
     }
     guardar_compras()
-    return 201, f"Compra registada com sucesso. ID: {id_compra}"
+    return 201, compras[id_compra]
 
 
 # READ (listar todas)
@@ -87,7 +87,9 @@ def listar_compras():
             dados["valor_total"],
             dados["data"]
         ))
-    return 200, ""
+    return 200, compras
+
+
 
 
 # READ (listar compras de um cliente)
@@ -120,7 +122,7 @@ def listar_compras_por_cliente(id_cliente):
             dados["valor_total"]
         ))
         guardar_compras()
-    return 200, ""
+    return 200, clientes[id_cliente]
 
 
 # READ (listar compras de um supermercado)
@@ -152,7 +154,7 @@ def listar_compras_por_supermercado(id_supermercado):
             dados["data"],
             dados["valor_total"]
         ))
-    return 200, ""
+    return 200, supermercados[id_supermercado]
 
 
 # READ (consultar individual)
@@ -175,7 +177,7 @@ def consultar_compra(id_compra):
     print(f"Supermercado:    {morada_super} | NIF: {nif_super} ({dados['id_supermercado']})")
     print(f"Data:            {dados['data']}")
     print(f"Valor Total:     {dados['valor_total']:.2f} €")
-    return 200, ""
+    return 200, compras[id_compra]
 
 
 # UPDATE
@@ -194,7 +196,7 @@ def atualizar_compra(id_compra, data=None, valor_total_texto=None):
             return 400, "valor total inválido. Introduza um número positivo."
         compras[id_compra]["valor_total"] = float(valor_total_texto)
     guardar_compras()
-    return 200, "compra atualizada com sucesso."
+    return 200, compras[id_compra]
 
 
 # DELETE

@@ -26,7 +26,7 @@ def guardar_produtos():
 
 
 def carregar_produtos():
-    global compras
+    global produtos
 
     if os.path.exists(FICHEIRO_PRODUTOS):
         with open(FICHEIRO_PRODUTOS, "r", encoding="utf-8") as ficheiro:
@@ -63,7 +63,7 @@ def criar_produto(nome, preco_texto, quantidade_texto, id_categoria, peso_texto)
         "peso": float(peso_texto)
     }
     guardar_produtos()
-    return 201, f"Produto criado com sucesso. ID: {id_produto}"
+    return 201, produtos[id_produto]
 
 
 # READ (listar todos)
@@ -88,7 +88,7 @@ def listar_produtos():
             dados["peso"],
             nome_cat
         ))
-    return 200, ""
+   return 200, produtos
 
 
 # READ (listar por categoria)
@@ -116,7 +116,7 @@ def listar_produtos_por_categoria(id_categoria):
             dados["quantidade_stock"],
             dados["peso"]
         ))
-    return 200, ""
+    return 200, encontrados
 
 
 # READ (consultar individual)
@@ -136,7 +136,7 @@ def consultar_produto(id_produto):
     print(f"Stock:           {dados['quantidade_stock']} unidades")
     print(f"Peso:            {dados['peso']:.3f} kg")
     print(f"Categoria:       {nome_cat} ({dados['id_categoria']})")
-    return 200, ""
+    return 200, produtos[id_produto]
 
 
 # UPDATE
@@ -170,7 +170,7 @@ def atualizar_produto(id_produto, nome=None, preco_texto=None, quantidade_texto=
             return 400, "peso inválido."
         produtos[id_produto]["peso"] = float(peso_texto)
     guardar_produtos()
-    return 200, "produto atualizado com sucesso."
+    return 200, produtos[id_produto]
 
 
 # DELETE
@@ -181,4 +181,4 @@ def remover_produto(id_produto):
 
     del produtos[id_produto]
     guardar_produtos()
-    return 200, "produto removido com sucesso."
+    return 200, id_produto

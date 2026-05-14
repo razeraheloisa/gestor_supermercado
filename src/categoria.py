@@ -56,7 +56,7 @@ def criar_categoria(nome_categoria, descricao):
         "descricao": descricao.strip()
     }
     guardar_categoria()
-    return 201, f"Categoria criada com sucesso. ID: {id_categoria}"
+    return 201, categorias[id_categoria] 
 
 
 # READ (listar todas)
@@ -73,8 +73,7 @@ def listar_categorias():
             dados["nome_categoria"],
             dados["descricao"]
         ))
-    guardar_categoria()
-    return 200, ""
+    return 200, categorias
 
 
 # READ (consultar individual)
@@ -88,8 +87,8 @@ def consultar_categoria(id_categoria):
     print(f"ID:        {id_categoria}")
     print(f"Nome:      {dados['nome_categoria']}")
     print(f"Descrição: {dados['descricao']}")
-    guardar_categoria()
-    return 200, ""
+    
+    return 200, dados
 
 
 # UPDATE
@@ -107,7 +106,7 @@ def atualizar_categoria(id_categoria, nome_categoria=None, descricao=None):
     if descricao:
         categorias[id_categoria]["descricao"] = descricao.strip()
     guardar_categoria()
-    return 200, "categoria atualizada com sucesso."
+    return 200, categorias[id_categoria]
 
 
 # DELETE
@@ -123,9 +122,10 @@ def remover_categoria(id_categoria):
 
     del categorias[id_categoria]
     guardar_categoria()
-    return 200, "categoria removida com sucesso."
+    return 200, id_categoria
 
 
 def categoria_existe(id_categoria):
+    carregar_categoria()
     """Verifica se uma categoria existe. Usada por produto.py."""
     return id_categoria in categorias

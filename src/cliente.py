@@ -62,7 +62,7 @@ def criar_cliente(nome, contacto, email="", nif=""):
         "nif": nif.strip()
     }
     guardar_clientes()
-    return 201, f"Cliente criado com sucesso. ID: {id_cliente}"
+    return 201, clientes[id_cliente]
 
 
 # READ (listar todos)
@@ -83,7 +83,7 @@ def listar_clientes():
             dados["email"] if dados["email"] else "-",
             dados["nif"] if dados["nif"] else "-"
         ))
-    return 200, ""
+    return 200, clientes
 
 
 # READ (consultar individual)
@@ -99,7 +99,7 @@ def consultar_cliente(id_cliente):
     print(f"Contacto:  {dados['contacto']}")
     print(f"Email:     {dados['email'] if dados['email'] else '-'}")
     print(f"NIF:       {dados['nif'] if dados['nif'] else '-'}")
-    return 200, ""
+    return 200, dados
 
 
 # READ (pesquisar por nome ou NIF)
@@ -126,7 +126,7 @@ def pesquisar_cliente(termo):
             dados["email"] if dados["email"] else "-",
             dados["nif"] if dados["nif"] else "-"
         ))
-    return 200, ""
+    return 200, encontrados
 
 
 # UPDATE
@@ -159,7 +159,7 @@ def atualizar_cliente(id_cliente, nome=None, contacto=None, email=None, nif=None
                     return 409, f"já existe um cliente com o NIF '{nif}'."
         clientes[id_cliente]["nif"] = nif.strip()
     guardar_clientes()
-    return 200, "cliente atualizado com sucesso."
+    return 200, clientes[id_cliente]
 
 
 # DELETE
@@ -175,8 +175,9 @@ def remover_cliente(id_cliente):
 
     del clientes[id_cliente]
     guardar_clientes()
-    return 200, "cliente removido com sucesso."
+    return 200, id_cliente
 
 def cliente_existe(id_cliente):
+    carregar_clientes()
     """Verifica se um cliente existe. Usada por compra.py."""
     return id_cliente in clientes
