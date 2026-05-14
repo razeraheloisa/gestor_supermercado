@@ -36,6 +36,7 @@ def carregar_produtos():
 
 # CREATE
 def criar_produto(nome, preco_texto, quantidade_texto, id_categoria, peso_texto):
+    carregar_produtos()
     from categoria import categoria_existe
 
     if not nome.strip():
@@ -61,11 +62,13 @@ def criar_produto(nome, preco_texto, quantidade_texto, id_categoria, peso_texto)
         "id_categoria": id_categoria,
         "peso": float(peso_texto)
     }
+    guardar_produtos()
     return 201, f"Produto criado com sucesso. ID: {id_produto}"
 
 
 # READ (listar todos)
 def listar_produtos():
+    carregar_produtos()
     from categoria import categorias
 
     if not produtos:
@@ -90,6 +93,7 @@ def listar_produtos():
 
 # READ (listar por categoria)
 def listar_produtos_por_categoria(id_categoria):
+    carregar_produtos()
     from categoria import categoria_existe, categorias
 
     if not categoria_existe(id_categoria):
@@ -117,6 +121,7 @@ def listar_produtos_por_categoria(id_categoria):
 
 # READ (consultar individual)
 def consultar_produto(id_produto):
+    carregar_produtos()
     from categoria import categorias
 
     if id_produto not in produtos:
@@ -136,6 +141,7 @@ def consultar_produto(id_produto):
 
 # UPDATE
 def atualizar_produto(id_produto, nome=None, preco_texto=None, quantidade_texto=None, id_categoria=None, peso_texto=None):
+    carregar_produtos()
     from categoria import categoria_existe
 
     if id_produto not in produtos:
@@ -163,14 +169,16 @@ def atualizar_produto(id_produto, nome=None, preco_texto=None, quantidade_texto=
         if not validar_peso(peso_texto):
             return 400, "peso inválido."
         produtos[id_produto]["peso"] = float(peso_texto)
-
+    guardar_produtos()
     return 200, "produto atualizado com sucesso."
 
 
 # DELETE
 def remover_produto(id_produto):
+    carregar_produtos()
     if id_produto not in produtos:
         return 404, f"produto '{id_produto}' não encontrado."
 
     del produtos[id_produto]
+    guardar_produtos()
     return 200, "produto removido com sucesso."
