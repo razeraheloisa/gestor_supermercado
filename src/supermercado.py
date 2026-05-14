@@ -36,6 +36,7 @@ def carregar_supermercado():
 
 # CREATE
 def criar_supermercado(numero, morada, nif):
+    carregar_supermercado()
     if not numero.strip():
         return 400, "o número do supermercado não pode estar vazio."
 
@@ -59,11 +60,13 @@ def criar_supermercado(numero, morada, nif):
         "morada": morada.strip(),
         "nif": nif.strip()
     }
+    guardar_supermercado()
     return 201, f"Supermercado criado com sucesso. ID: {id_supermercado}"
 
 
 # READ (listar todos)
 def listar_supermercados():
+    carregar_supermercado()
     if not supermercados:
         return 404, "não existem supermercados registados."
 
@@ -83,6 +86,7 @@ def listar_supermercados():
 
 # READ (consultar individual)
 def consultar_supermercado(id_supermercado):
+    carregar_supermercado()
     if id_supermercado not in supermercados:
         return 404, f"supermercado '{id_supermercado}' não encontrado."
 
@@ -97,6 +101,7 @@ def consultar_supermercado(id_supermercado):
 
 # UPDATE
 def atualizar_supermercado(id_supermercado, numero=None, morada=None, nif=None):
+    carregar_supermercado()
     if id_supermercado not in supermercados:
         return 404, f"supermercado '{id_supermercado}' não encontrado."
 
@@ -120,12 +125,13 @@ def atualizar_supermercado(id_supermercado, numero=None, morada=None, nif=None):
             if sid != id_supermercado and dados["nif"] == nif.strip():
                 return 409, f"já existe um supermercado com o NIF '{nif}'."
         supermercados[id_supermercado]["nif"] = nif.strip()
-
+    guardar_supermercado()
     return 200, "supermercado atualizado com sucesso."
 
 
 # DELETE
 def remover_supermercado(id_supermercado):
+    carregar_supermercado()
     if id_supermercado not in supermercados:
         return 404, f"supermercado '{id_supermercado}' não encontrado."
 
@@ -135,6 +141,7 @@ def remover_supermercado(id_supermercado):
             return 409, f"não é possível remover o supermercado '{id_supermercado}' porque tem compras associadas."
 
     del supermercados[id_supermercado]
+    guardar_supermercado()
     return 200, "supermercado removido com sucesso."
 
 
