@@ -7,11 +7,8 @@
 # ==============================
 
 from utils import gerar_id_produto, validar_preco, validar_quantidade, validar_peso
-
-
 import json
 import os
-
 
 produtos = {}
 FICHEIRO_PRODUTOS = "produtos.json"
@@ -27,12 +24,12 @@ def guardar_produtos():
 
 def carregar_produtos():
     global produtos
-
     if os.path.exists(FICHEIRO_PRODUTOS):
         with open(FICHEIRO_PRODUTOS, "r", encoding="utf-8") as ficheiro:
             produtos = json.load(ficheiro)
     else:
         produtos = {}
+
 
 # CREATE
 def criar_produto(nome, preco_texto, quantidade_texto, id_categoria, peso_texto):
@@ -88,7 +85,7 @@ def listar_produtos():
             dados["peso"],
             nome_cat
         ))
-   return 200, produtos
+    return 200, produtos  # corrigido: estava dentro do for
 
 
 # READ (listar por categoria)
@@ -147,28 +144,31 @@ def atualizar_produto(id_produto, nome=None, preco_texto=None, quantidade_texto=
     if id_produto not in produtos:
         return 404, f"produto '{id_produto}' não encontrado."
 
-    if nome:
+    if nome is not None:
+        if not nome.strip():
+            return 400, "o nome do produto não pode estar vazio."
         produtos[id_produto]["nome"] = nome.strip()
 
-    if preco_texto:
+    if preco_texto is not None:
         if not validar_preco(preco_texto):
-            return 400, "preço inválido."
+            return 400, "preço inválido. Introduza um número positivo (ex: 1.99)."
         produtos[id_produto]["preco"] = float(preco_texto)
 
-    if quantidade_texto:
+    if quantidade_texto is not None:
         if not validar_quantidade(quantidade_texto):
-            return 400, "quantidade inválida."
+            return 400, "quantidade inválida. Introduza um número inteiro não negativo."
         produtos[id_produto]["quantidade_stock"] = int(quantidade_texto)
 
-    if id_categoria:
+    if id_categoria is not None:
         if not categoria_existe(id_categoria):
             return 404, f"categoria '{id_categoria}' não encontrada."
         produtos[id_produto]["id_categoria"] = id_categoria
 
-    if peso_texto:
+    if peso_texto is not None:
         if not validar_peso(peso_texto):
-            return 400, "peso inválido."
+            return 400, "peso inválido. Introduza um número positivo (ex: 0.5)."
         produtos[id_produto]["peso"] = float(peso_texto)
+
     guardar_produtos()
     return 200, produtos[id_produto]
 
@@ -176,6 +176,7 @@ def atualizar_produto(id_produto, nome=None, preco_texto=None, quantidade_texto=
 # DELETE
 def remover_produto(id_produto):
     carregar_produtos()
+
     if id_produto not in produtos:
         return 404, f"produto '{id_produto}' não encontrado."
 
