@@ -7,12 +7,34 @@
 # ==============================
 
 from utils import gerar_id_supermercado, validar_nif
+import json
+import os
 
 supermercados = {}
+FICHEIRO_SUPERMERCADOS = "supermercados.json"
+
+# ==============================
+# Persistência
+# ==============================
+
+def guardar_supermercado():
+    with open(FICHEIRO_SUPERMERCADOS, "w", encoding="utf-8") as ficheiro:
+        json.dump(supermercados, ficheiro, indent=4, ensure_ascii=False)
+
+
+def carregar_supermercado():
+    global supermercados  # corrigido: faltava esta linha
+    if os.path.exists(FICHEIRO_SUPERMERCADOS):
+        with open(FICHEIRO_SUPERMERCADOS, "r", encoding="utf-8") as ficheiro:
+            supermercados = json.load(ficheiro)
+    else:
+        supermercados = {}
 
 
 # CREATE
 def criar_supermercado(numero, morada, nif):
+    carregar_supermercado()
+
     if not numero.strip():
         return 400, "o número do supermercado não pode estar vazio."
 
@@ -36,11 +58,14 @@ def criar_supermercado(numero, morada, nif):
         "morada": morada.strip(),
         "nif": nif.strip()
     }
-    return 201, f"Supermercado criado com sucesso. ID: {id_supermercado}"
+    guardar_supermercado()
+    return 201, supermercados[id_supermercado]
 
 
 # READ (listar todos)
 def listar_supermercados():
+    carregar_supermercado()
+
     if not supermercados:
         return 404, "não existem supermercados registados."
 
@@ -55,11 +80,13 @@ def listar_supermercados():
             dados["morada"],
             dados["nif"]
         ))
-    return 200, ""
+    return 200, supermercados
 
 
 # READ (consultar individual)
 def consultar_supermercado(id_supermercado):
+    carregar_supermercado()
+
     if id_supermercado not in supermercados:
         return 404, f"supermercado '{id_supermercado}' não encontrado."
 
@@ -69,11 +96,13 @@ def consultar_supermercado(id_supermercado):
     print(f"Número:  {dados['numero']}")
     print(f"Morada:  {dados['morada']}")
     print(f"NIF:     {dados['nif']}")
-    return 200, ""
+    return 200, supermercados[id_supermercado]
 
 
 # UPDATE
 def atualizar_supermercado(id_supermercado, numero=None, morada=None, nif=None):
+    carregar_supermercado()
+
     if id_supermercado not in supermercados:
         return 404, f"supermercado '{id_supermercado}' não encontrado."
 
@@ -98,11 +127,14 @@ def atualizar_supermercado(id_supermercado, numero=None, morada=None, nif=None):
                 return 409, f"já existe um supermercado com o NIF '{nif}'."
         supermercados[id_supermercado]["nif"] = nif.strip()
 
-    return 200, "supermercado atualizado com sucesso."
+    guardar_supermercado()
+    return 200, supermercados[id_supermercado]
 
 
 # DELETE
 def remover_supermercado(id_supermercado):
+    carregar_supermercado()
+
     if id_supermercado not in supermercados:
         return 404, f"supermercado '{id_supermercado}' não encontrado."
 
@@ -112,9 +144,11 @@ def remover_supermercado(id_supermercado):
             return 409, f"não é possível remover o supermercado '{id_supermercado}' porque tem compras associadas."
 
     del supermercados[id_supermercado]
-    return 200, "supermercado removido com sucesso."
+    guardar_supermercado()
+    return 200, id_supermercado
 
 
 def supermercado_existe(id_supermercado):
     """Verifica se um supermercado existe. Usada por compra.py."""
+    carregar_supermercado()
     return id_supermercado in supermercados

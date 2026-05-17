@@ -7,12 +7,36 @@
 # ==============================
 
 from utils import gerar_id_cliente, validar_contacto, validar_email, validar_nif
+import json
+import os
+
 
 clientes = {}
+FICHEIRO_CLIENTES = "clientes.json"
+
+# ==============================
+# Persistência
+# ==============================
+
+def guardar_clientes():
+    with open(FICHEIRO_CLIENTES, "w", encoding="utf-8") as ficheiro:
+        json.dump(clientes, ficheiro, indent=4, ensure_ascii=False)
+
+
+def carregar_clientes():
+    global clientes
+
+    if os.path.exists(FICHEIRO_CLIENTES):
+        with open(FICHEIRO_CLIENTES, "r", encoding="utf-8") as ficheiro:
+            clientes = json.load(ficheiro)
+    else:
+        clientes = {}
+
 
 
 # CREATE
 def criar_cliente(nome, contacto, email="", nif=""):
+    carregar_clientes()
     if not nome.strip():
         return 400, "o nome do cliente não pode estar vazio."
 
@@ -37,11 +61,13 @@ def criar_cliente(nome, contacto, email="", nif=""):
         "email": email.strip(),
         "nif": nif.strip()
     }
-    return 201, f"Cliente criado com sucesso. ID: {id_cliente}"
+    guardar_clientes()
+    return 201, clientes[id_cliente]
 
 
 # READ (listar todos)
 def listar_clientes():
+    carregar_clientes()
     if not clientes:
         return 404, "não existem clientes registados."
 
@@ -57,11 +83,12 @@ def listar_clientes():
             dados["email"] if dados["email"] else "-",
             dados["nif"] if dados["nif"] else "-"
         ))
-    return 200, ""
+    return 200, clientes
 
 
 # READ (consultar individual)
 def consultar_cliente(id_cliente):
+    carregar_clientes()
     if id_cliente not in clientes:
         return 404, f"cliente '{id_cliente}' não encontrado."
 
@@ -72,11 +99,12 @@ def consultar_cliente(id_cliente):
     print(f"Contacto:  {dados['contacto']}")
     print(f"Email:     {dados['email'] if dados['email'] else '-'}")
     print(f"NIF:       {dados['nif'] if dados['nif'] else '-'}")
-    return 200, ""
+    return 200, dados
 
 
 # READ (pesquisar por nome ou NIF)
 def pesquisar_cliente(termo):
+    carregar_clientes()
     termo = termo.strip().lower()
     encontrados = {
         cid: d for cid, d in clientes.items()
@@ -98,11 +126,12 @@ def pesquisar_cliente(termo):
             dados["email"] if dados["email"] else "-",
             dados["nif"] if dados["nif"] else "-"
         ))
-    return 200, ""
+    return 200, encontrados
 
 
 # UPDATE
 def atualizar_cliente(id_cliente, nome=None, contacto=None, email=None, nif=None):
+    carregar_clientes()
     if id_cliente not in clientes:
         return 404, f"cliente '{id_cliente}' não encontrado."
 
@@ -129,12 +158,13 @@ def atualizar_cliente(id_cliente, nome=None, contacto=None, email=None, nif=None
                 if cid != id_cliente and dados["nif"] == nif.strip():
                     return 409, f"já existe um cliente com o NIF '{nif}'."
         clientes[id_cliente]["nif"] = nif.strip()
-
-    return 200, "cliente atualizado com sucesso."
+    guardar_clientes()
+    return 200, clientes[id_cliente]
 
 
 # DELETE
 def remover_cliente(id_cliente):
+    carregar_clientes()
     if id_cliente not in clientes:
         return 404, f"cliente '{id_cliente}' não encontrado."
 
@@ -144,9 +174,10 @@ def remover_cliente(id_cliente):
             return 409, f"não é possível remover o cliente '{id_cliente}' porque tem compras associadas."
 
     del clientes[id_cliente]
-    return 200, "cliente removido com sucesso."
-
+    guardar_clientes()
+    return 200, id_cliente
 
 def cliente_existe(id_cliente):
+    carregar_clientes()
     """Verifica se um cliente existe. Usada por compra.py."""
     return id_cliente in clientes

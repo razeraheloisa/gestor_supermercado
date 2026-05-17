@@ -4,47 +4,66 @@
 # ==============================
 
 import re
+import json
+import os
 
-# contadores simples para gerar IDs automáticos
-contador_produtos = 1
-contador_categorias = 1
-contador_clientes = 1
-contador_compras = 1
-contador_supermercados = 1
+FICHEIRO_CONTADORES = "contadores.json"
+
+# ==============================
+# Persistência dos contadores
+# (evita IDs duplicados após reinício)
+# ==============================
+
+def _carregar_contadores():
+    if os.path.exists(FICHEIRO_CONTADORES):
+        with open(FICHEIRO_CONTADORES, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {
+        "produtos": 1,
+        "categorias": 1,
+        "clientes": 1,
+        "compras": 1,
+        "supermercados": 1
+    }
+
+def _guardar_contadores(contadores):
+    with open(FICHEIRO_CONTADORES, "w", encoding="utf-8") as f:
+        json.dump(contadores, f, indent=4)
 
 
 def gerar_id_produto():
-    global contador_produtos
-    novo_id = f"P{contador_produtos:03d}"
-    contador_produtos += 1
+    c = _carregar_contadores()
+    novo_id = f"P{c['produtos']:03d}"
+    c["produtos"] += 1
+    _guardar_contadores(c)
     return novo_id
-
 
 def gerar_id_categoria():
-    global contador_categorias
-    novo_id = f"C{contador_categorias:03d}"
-    contador_categorias += 1
+    c = _carregar_contadores()
+    novo_id = f"C{c['categorias']:03d}"
+    c["categorias"] += 1
+    _guardar_contadores(c)
     return novo_id
-
 
 def gerar_id_cliente():
-    global contador_clientes
-    novo_id = f"CL{contador_clientes:03d}"
-    contador_clientes += 1
+    c = _carregar_contadores()
+    novo_id = f"CL{c['clientes']:03d}"
+    c["clientes"] += 1
+    _guardar_contadores(c)
     return novo_id
-
 
 def gerar_id_compra():
-    global contador_compras
-    novo_id = f"CO{contador_compras:03d}"
-    contador_compras += 1
+    c = _carregar_contadores()
+    novo_id = f"CO{c['compras']:03d}"
+    c["compras"] += 1
+    _guardar_contadores(c)
     return novo_id
 
-
 def gerar_id_supermercado():
-    global contador_supermercados
-    novo_id = f"S{contador_supermercados:03d}"
-    contador_supermercados += 1
+    c = _carregar_contadores()
+    novo_id = f"S{c['supermercados']:03d}"
+    c["supermercados"] += 1
+    _guardar_contadores(c)
     return novo_id
 
 
@@ -56,7 +75,6 @@ def validar_preco(valor_texto):
     except ValueError:
         return False
 
-
 def validar_quantidade(valor_texto):
     """Valida se o valor introduzido é um número inteiro não negativo."""
     try:
@@ -64,7 +82,6 @@ def validar_quantidade(valor_texto):
         return valor >= 0
     except ValueError:
         return False
-
 
 def validar_peso(valor_texto):
     """Valida se o peso introduzido é um número decimal positivo."""
@@ -74,21 +91,17 @@ def validar_peso(valor_texto):
     except ValueError:
         return False
 
-
 def validar_contacto(contacto):
     """Valida se o contacto tem exactamente 9 dígitos numéricos."""
     return bool(re.fullmatch(r"\d{9}", contacto.strip()))
-
 
 def validar_email(email):
     """Valida se o email tem um formato básico válido."""
     return bool(re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email.strip()))
 
-
 def validar_nif(nif):
     """Valida se o NIF tem exactamente 9 dígitos numéricos."""
     return bool(re.fullmatch(r"\d{9}", nif.strip()))
-
 
 def validar_data(data):
     """Valida se a data está no formato DD/MM/AAAA."""
