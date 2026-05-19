@@ -6,7 +6,11 @@
 # validações feitas aqui (não no main)
 # ==============================
 
+import logging
+
 from utils import gerar_id_produto, validar_preco, validar_quantidade, validar_peso
+
+logger = logging.getLogger(__name__)
 
 produtos = {}
 
@@ -16,18 +20,23 @@ def criar_produto(nome, preco_texto, quantidade_texto, id_categoria, peso_texto)
     from categoria import categoria_existe
 
     if not nome.strip():
+        logging.error("Tentativa de criar produto com nome vazio.")
         return 400, "o nome do produto não pode estar vazio."
 
     if not validar_preco(preco_texto):
+        logging.error(f"Preço inválido ao criar produto '{nome}': '{preco_texto}'.")
         return 400, "preço inválido. Introduza um número positivo (ex: 1.99)."
 
     if not validar_quantidade(quantidade_texto):
+        logging.error(f"Quantidade inválida ao criar produto '{nome}': '{quantidade_texto}'.")
         return 400, "quantidade inválida. Introduza um número inteiro não negativo."
 
     if not categoria_existe(id_categoria):
+        logging.error(f"Categoria não encontrada ao criar produto '{nome}': {id_categoria}.")
         return 404, f"categoria '{id_categoria}' não encontrada."
 
     if not validar_peso(peso_texto):
+        logging.error(f"Peso inválido ao criar produto '{nome}': '{peso_texto}'.")
         return 400, "peso inválido. Introduza um número positivo (ex: 0.5)."
 
     id_produto = gerar_id_produto()
@@ -38,6 +47,7 @@ def criar_produto(nome, preco_texto, quantidade_texto, id_categoria, peso_texto)
         "id_categoria": id_categoria,
         "peso": float(peso_texto)
     }
+    logging.info(f"Produto criado com sucesso. ID: {id_produto} | Nome: '{nome.strip()}' | Categoria: {id_categoria}.")
     return 201, f"Produto criado com sucesso. ID: {id_produto}"
 
 
@@ -46,8 +56,10 @@ def listar_produtos():
     from categoria import categorias
 
     if not produtos:
+        logging.error("Listagem de produtos: nenhum produto registado.")
         return 404, "não existem produtos registados."
 
+    logging.debug(f"Listagem de produtos: {len(produtos)} produto(s) encontrado(s).")
     print("\n{:<8} {:<22} {:<10} {:<10} {:<10} {:<10}".format(
         "ID", "Nome", "Preço (€)", "Stock", "Peso (kg)", "Categoria"
     ))
@@ -70,14 +82,17 @@ def listar_produtos_por_categoria(id_categoria):
     from categoria import categoria_existe, categorias
 
     if not categoria_existe(id_categoria):
+        logging.error(f"Categoria não encontrada ao listar produtos por categoria: {id_categoria}.")
         return 404, f"categoria '{id_categoria}' não encontrada."
 
     nome_cat = categorias[id_categoria]["nome_categoria"]
     encontrados = {pid: d for pid, d in produtos.items() if d["id_categoria"] == id_categoria}
 
     if not encontrados:
+        logging.error(f"Nenhum produto encontrado na categoria {id_categoria} ('{nome_cat}').")
         return 404, f"não existem produtos na categoria '{nome_cat}'."
 
+    logging.debug(f"Listagem de produtos da categoria {id_categoria}: {len(encontrados)} produto(s) encontrado(s).")
     print(f"\n--- Produtos da categoria: {nome_cat} ---")
     print("{:<8} {:<22} {:<10} {:<10} {}".format("ID", "Nome", "Preço (€)", "Stock", "Peso (kg)"))
     print("-" * 60)
@@ -97,8 +112,10 @@ def consultar_produto(id_produto):
     from categoria import categorias
 
     if id_produto not in produtos:
+        logging.error(f"Produto não encontrado: {id_produto}.")
         return 404, f"produto '{id_produto}' não encontrado."
 
+    logging.debug(f"Consulta de produto: {id_produto}.")
     dados = produtos[id_produto]
     nome_cat = categorias.get(dados["id_categoria"], {}).get("nome_categoria", "?")
     print(f"\n--- Produto ---")
@@ -116,6 +133,7 @@ def atualizar_produto(id_produto, nome=None, preco_texto=None, quantidade_texto=
     from categoria import categoria_existe
 
     if id_produto not in produtos:
+        logging.error(f"Produto não encontrado para atualização: {id_produto}.")
         return 404, f"produto '{id_produto}' não encontrado."
 
     if nome:
@@ -123,31 +141,38 @@ def atualizar_produto(id_produto, nome=None, preco_texto=None, quantidade_texto=
 
     if preco_texto:
         if not validar_preco(preco_texto):
+            logging.error(f"Preço inválido ao atualizar produto {id_produto}: '{preco_texto}'.")
             return 400, "preço inválido."
         produtos[id_produto]["preco"] = float(preco_texto)
 
     if quantidade_texto:
         if not validar_quantidade(quantidade_texto):
+            logging.error(f"Quantidade inválida ao atualizar produto {id_produto}: '{quantidade_texto}'.")
             return 400, "quantidade inválida."
         produtos[id_produto]["quantidade_stock"] = int(quantidade_texto)
 
     if id_categoria:
         if not categoria_existe(id_categoria):
+            logging.error(f"Categoria não encontrada ao atualizar produto {id_produto}: {id_categoria}.")
             return 404, f"categoria '{id_categoria}' não encontrada."
         produtos[id_produto]["id_categoria"] = id_categoria
 
     if peso_texto:
         if not validar_peso(peso_texto):
+            logging.error(f"Peso inválido ao atualizar produto {id_produto}: '{peso_texto}'.")
             return 400, "peso inválido."
         produtos[id_produto]["peso"] = float(peso_texto)
 
+    logging.info(f"Produto atualizado com sucesso. ID: {id_produto}.")
     return 200, "produto atualizado com sucesso."
 
 
 # DELETE
 def remover_produto(id_produto):
     if id_produto not in produtos:
+        logging.error(f"Produto não encontrado para remoção: {id_produto}.")
         return 404, f"produto '{id_produto}' não encontrado."
 
     del produtos[id_produto]
+    logging.info(f"Produto removido com sucesso. ID: {id_produto}.")
     return 200, "produto removido com sucesso."
