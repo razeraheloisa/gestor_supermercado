@@ -6,7 +6,11 @@
 # validações feitas aqui (não no main)
 # ==============================
 
+import logging
+
 from utils import gerar_id_compra, validar_preco, validar_data
+
+logger = logging.getLogger(__name__)
 
 compras = {}
 
@@ -17,15 +21,19 @@ def criar_compra(id_cliente, id_supermercado, data, valor_total_texto):
     from supermercado import supermercado_existe
 
     if not cliente_existe(id_cliente):
+        logging.error(f"Cliente não encontrado ao criar compra: {id_cliente}.")
         return 404, f"cliente '{id_cliente}' não encontrado."
 
     if not supermercado_existe(id_supermercado):
+        logging.error(f"Supermercado não encontrado ao criar compra: {id_supermercado}.")
         return 404, f"supermercado '{id_supermercado}' não encontrado."
 
     if not validar_data(data):
+        logging.error(f"Data inválida ao criar compra: '{data}'.")
         return 400, "data inválida. Utilize o formato DD/MM/AAAA (ex: 25/04/2025)."
 
     if not validar_preco(valor_total_texto):
+        logging.error(f"Valor total inválido ao criar compra: '{valor_total_texto}'.")
         return 400, "valor total inválido. Introduza um número positivo (ex: 15.99)."
 
     id_compra = gerar_id_compra()
@@ -35,6 +43,7 @@ def criar_compra(id_cliente, id_supermercado, data, valor_total_texto):
         "data": data.strip(),
         "valor_total": float(valor_total_texto)
     }
+    logging.info(f"Compra registada com sucesso. ID: {id_compra} | Cliente: {id_cliente} | Supermercado: {id_supermercado} | Data: {data.strip()} | Valor: {float(valor_total_texto):.2f}€.")
     return 201, f"Compra registada com sucesso. ID: {id_compra}"
 
 
@@ -44,8 +53,10 @@ def listar_compras():
     from supermercado import supermercados
 
     if not compras:
+        logging.error("Listagem de compras: nenhuma compra registada.")
         return 404, "não existem compras registadas."
 
+    logging.debug(f"Listagem de compras: {len(compras)} compra(s) encontrada(s).")
     print("\n{:<8} {:<8} {:<25} {:<8} {:<35} {:<12}".format(
         "ID", "Cliente", "Nome Cliente", "Superm.", "Morada Supermercado", "Valor (€)"
     ))
@@ -71,14 +82,17 @@ def listar_compras_por_cliente(id_cliente):
     from supermercado import supermercados
 
     if not cliente_existe(id_cliente):
+        logging.error(f"Cliente não encontrado ao listar compras por cliente: {id_cliente}.")
         return 404, f"cliente '{id_cliente}' não encontrado."
 
     nome_cliente = clientes[id_cliente]["nome"]
     encontradas = {cid: d for cid, d in compras.items() if d["id_cliente"] == id_cliente}
 
     if not encontradas:
+        logging.error(f"Nenhuma compra encontrada para o cliente {id_cliente} ('{nome_cliente}').")
         return 404, f"o cliente '{nome_cliente}' não tem compras registadas."
 
+    logging.debug(f"Listagem de compras do cliente {id_cliente}: {len(encontradas)} compra(s) encontrada(s).")
     print(f"\n--- Compras do cliente: {nome_cliente} ({id_cliente}) ---")
     print("\n{:<8} {:<8} {:<35} {:<12} {:<12}".format(
         "ID", "Superm.", "Morada", "Data", "Valor (€)"
@@ -102,14 +116,17 @@ def listar_compras_por_supermercado(id_supermercado):
     from cliente import clientes
 
     if not supermercado_existe(id_supermercado):
+        logging.error(f"Supermercado não encontrado ao listar compras por supermercado: {id_supermercado}.")
         return 404, f"supermercado '{id_supermercado}' não encontrado."
 
     morada = supermercados[id_supermercado]["morada"]
     encontradas = {cid: d for cid, d in compras.items() if d["id_supermercado"] == id_supermercado}
 
     if not encontradas:
+        logging.error(f"Nenhuma compra encontrada para o supermercado {id_supermercado} ('{morada}').")
         return 404, f"o supermercado '{morada}' não tem compras registadas."
 
+    logging.debug(f"Listagem de compras do supermercado {id_supermercado}: {len(encontradas)} compra(s) encontrada(s).")
     print(f"\n--- Compras no supermercado: {morada} ({id_supermercado}) ---")
     print("\n{:<8} {:<8} {:<25} {:<12} {:<12}".format(
         "ID", "Cliente", "Nome Cliente", "Data", "Valor (€)"
@@ -133,8 +150,10 @@ def consultar_compra(id_compra):
     from supermercado import supermercados
 
     if id_compra not in compras:
+        logging.error(f"Compra não encontrada: {id_compra}.")
         return 404, f"compra '{id_compra}' não encontrada."
 
+    logging.debug(f"Consulta de compra: {id_compra}.")
     dados = compras[id_compra]
     nome_cliente = clientes.get(dados["id_cliente"], {}).get("nome", "?")
     morada_super = supermercados.get(dados["id_supermercado"], {}).get("morada", "?")
@@ -152,30 +171,38 @@ def consultar_compra(id_compra):
 # UPDATE
 def atualizar_compra(id_compra, data=None, valor_total_texto=None):
     if id_compra not in compras:
+        logging.error(f"Compra não encontrada para atualização: {id_compra}.")
         return 404, f"compra '{id_compra}' não encontrada."
 
     if data is not None:
         if not validar_data(data):
+            logging.error(f"Data inválida ao atualizar compra {id_compra}: '{data}'.")
             return 400, "data inválida. Utilize o formato DD/MM/AAAA."
         compras[id_compra]["data"] = data.strip()
 
     if valor_total_texto is not None:
         if not validar_preco(valor_total_texto):
+            logging.error(f"Valor total inválido ao atualizar compra {id_compra}: '{valor_total_texto}'.")
             return 400, "valor total inválido. Introduza um número positivo."
         compras[id_compra]["valor_total"] = float(valor_total_texto)
 
+    logging.info(f"Compra atualizada com sucesso. ID: {id_compra}.")
     return 200, "compra atualizada com sucesso."
 
 
 # DELETE
 def remover_compra(id_compra):
     if id_compra not in compras:
+        logging.error(f"Compra não encontrada para remoção: {id_compra}.")
         return 404, f"compra '{id_compra}' não encontrada."
 
     del compras[id_compra]
+    logging.info(f"Compra removida com sucesso. ID: {id_compra}.")
     return 200, "compra removida com sucesso."
 
 
 def compra_existe(id_compra):
     """Verifica se uma compra existe."""
-    return id_compra in compras
+    existe = id_compra in compras
+    logging.debug(f"Verificação de existência de compra {id_compra}: {'encontrada' if existe else 'não encontrada'}.")
+    return existe
