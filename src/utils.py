@@ -4,6 +4,9 @@
 # ==============================
 
 import re
+import json
+import os
+import logging
 
 # contadores simples para gerar IDs automáticos
 contador_produtos = 1
@@ -93,3 +96,20 @@ def validar_nif(nif):
 def validar_data(data):
     """Valida se a data está no formato DD/MM/AAAA."""
     return bool(re.fullmatch(r"\d{2}/\d{2}/\d{4}", data.strip()))
+
+
+# Criar pasta de logs automaticamente
+os.makedirs("logs", exist_ok=True)
+
+# Configuração do logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s | %(levelname)-8s | %(message)s",
+    handlers=[
+        logging.FileHandler("logs/gestor.log"),
+        logging.StreamHandler()
+    ]
+)
+
+# Criar logger
+logger = logging.getLogger("gestor")
