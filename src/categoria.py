@@ -1,97 +1,78 @@
 # ==============================
-# categoria.py
-# CRUD simples para entidade Categoria
-# SEM utilização de classes
-# armazenamento em dicionário
-# validações feitas aqui (não no main)
+# ui/paginas/categorias.py
 # ==============================
 
-from utils import gerar_id_categoria
-
-categorias = {}
-
-
-# CREATE
-def criar_categoria(nome_categoria, descricao):
-    if not nome_categoria.strip():
-        return 400, "o nome da categoria não pode estar vazio."
-
-    if not descricao.strip():
-        return 400, "a descrição não pode estar vazia."
-
-    for dados in categorias.values():
-        if dados["nome_categoria"].lower() == nome_categoria.strip().lower():
-            return 409, f"já existe uma categoria com o nome '{nome_categoria}'."
-
-    id_categoria = gerar_id_categoria()
-    categorias[id_categoria] = {
-        "id_categoria": id_categoria,
-        "nome_categoria": nome_categoria.strip(),
-        "descricao": descricao.strip()
-    }
-    return 201, f"Categoria criada com sucesso. ID: {id_categoria}"
+from ui.paginas.base import PaginaBase
+from ui.widgets import CampoForm
 
 
-# READ (listar todas)
-def listar_categorias():
-    if not categorias:
-        return 404, "não existem categorias registadas."
+class PaginaCategorias(PaginaBase):
+    TITULO  = "Categorias"
+    COLUNAS = [
+        ("id",        "ID",        80),
+        ("nome",      "Nome",      160),
+        ("descricao", "Descrição", 320),
+    ]
 
-    print("\n{:<8} {:<20} {}".format("ID", "Nome", "Descrição"))
-    print("-" * 60)
-    for id_categoria, dados in categorias.items():
-        print("{:<8} {:<20} {}".format(
-            id_categoria,
-            dados["nome_categoria"],
-            dados["descricao"]
-        ))
-    return 200, ""
+    def _construir_campos(self, frame):
+        self._campo_nome     = CampoForm(frame, "Nome da categoria")
+        self._campo_nome.pack(fill="x", pady=6)
 
+        self._campo_descricao = CampoForm(frame, "Descrição")
+        self._campo_descricao.pack(fill="x", pady=6)
 
-# READ (consultar individual)
-def consultar_categoria(id_categoria):
-    if id_categoria not in categorias:
-        return 404, f"categoria '{id_categoria}' não encontrada."
+    def _carregar_tabela(self, termo=""):
+        from categoria import categorias, carregar_categorias
 
-    dados = categorias[id_categoria]
-    print(f"\n--- Categoria ---")
-    print(f"ID:        {id_categoria}")
-    print(f"Nome:      {dados['nome_categoria']}")
-    print(f"Descrição: {dados['descricao']}")
-    return 200, ""
+        carregar_categorias()
 
+        fonte = {
+            cid: d for cid, d in categorias.items()
+            if not termo or termo.lower() in d["nome_categoria"].lower()
+               or termo.lower() in d["descricao"].lower()
+        }
 
-# UPDATE
-def atualizar_categoria(id_categoria, nome_categoria=None, descricao=None):
-    if id_categoria not in categorias:
-        return 404, f"categoria '{id_categoria}' não encontrada."
+        linhas = [
+            (cid, d["nome_categoria"], d["descricao"])
+            for cid, d in fonte.items()
+        ]
+        self._tabela.preencher(linhas)
 
-    if nome_categoria:
-        for cid, dados in categorias.items():
-            if cid != id_categoria and dados["nome_categoria"].lower() == nome_categoria.strip().lower():
-                return 409, f"já existe uma categoria com o nome '{nome_categoria}'."
-        categorias[id_categoria]["nome_categoria"] = nome_categoria.strip()
+    def _guardar(self):
+        from categoria import criar_categoria, atualizar_categoria
 
-    if descricao:
-        categorias[id_categoria]["descricao"] = descricao.strip()
+        nome     = self._campo_nome.get()
+        descricao = self._campo_descricao.get()
 
-    return 200, "categoria atualizada com sucesso."
+        if self._id_seleccionado:
+            codigo, resultado = atualizar_categoria(
+                self._id_seleccionado, nome_categoria=nome, descricao=descricao)
+        else:
+            codigo, resultado = criar_categoria(nome, descricao)
 
+        if codigo in (200, 201):
+            self._feedback.sucesso(
+                f"Categoria {'atualizada' if self._id_seleccionado else 'criada'} com sucesso.")
+            self._fechar_painel()
+            self._carregar_tabela()
+        else:
+            self._feedback_form.erro(resultado)
 
-# DELETE
-def remover_categoria(id_categoria):
-    if id_categoria not in categorias:
-        return 404, f"categoria '{id_categoria}' não encontrada."
+    def _remover(self):
+        from categoria import remover_categoria
 
-    from produto import produtos
-    for dados_produto in produtos.values():
-        if dados_produto["id_categoria"] == id_categoria:
-            return 409, f"não é possível remover a categoria '{id_categoria}' porque existem produtos associados."
+        codigo, resultado = remover_categoria(self._id_seleccionado)
+        if codigo == 200:
+            self._feedback.sucesso("Categoria removida com sucesso.")
+            self._fechar_painel()
+            self._carregar_tabela()
+        else:
+            self._feedback.erro(resultado)
 
-    del categorias[id_categoria]
-    return 200, "categoria removida com sucesso."
+    def _preencher_campos(self, valores):
+        self._campo_nome.set(valores[1])
+        self._campo_descricao.set(valores[2])
 
-
-def categoria_existe(id_categoria):
-    """Verifica se uma categoria existe. Usada por produto.py."""
-    return id_categoria in categorias
+    def _limpar_campos(self):
+        self._campo_nome.limpar()
+        self._campo_descricao.limpar()
