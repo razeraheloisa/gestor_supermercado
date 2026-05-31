@@ -1,120 +1,87 @@
 # ==============================
-# supermercado.py
-# CRUD simples para entidade Supermercado
-# SEM utilização de classes
-# armazenamento em dicionário
-# validações feitas aqui (não no main)
+# ui/paginas/supermercados.py
 # ==============================
 
-from utils import gerar_id_supermercado, validar_nif
-
-supermercados = {}
-
-
-# CREATE
-def criar_supermercado(numero, morada, nif):
-    if not numero.strip():
-        return 400, "o número do supermercado não pode estar vazio."
-
-    if not morada.strip():
-        return 400, "a morada não pode estar vazia."
-
-    if not validar_nif(nif):
-        return 400, "NIF inválido. O NIF deve ter exactamente 9 dígitos numéricos."
-
-    for dados in supermercados.values():
-        if dados["nif"] == nif.strip():
-            return 409, f"já existe um supermercado com o NIF '{nif}'."
-
-    for dados in supermercados.values():
-        if dados["numero"].lower() == numero.strip().lower():
-            return 409, f"já existe um supermercado com o número '{numero}'."
-
-    id_supermercado = gerar_id_supermercado()
-    supermercados[id_supermercado] = {
-        "numero": numero.strip(),
-        "morada": morada.strip(),
-        "nif": nif.strip()
-    }
-    return 201, f"Supermercado criado com sucesso. ID: {id_supermercado}"
+from ui.paginas.base import PaginaBase
+from ui.widgets import CampoForm
 
 
-# READ (listar todos)
-def listar_supermercados():
-    if not supermercados:
-        return 404, "não existem supermercados registados."
+class PaginaSupermercados(PaginaBase):
+    TITULO  = "Supermercados"
+    COLUNAS = [
+        ("id",     "ID",     70),
+        ("numero", "Número", 100),
+        ("morada", "Morada", 280),
+        ("nif",    "NIF",    110),
+    ]
 
-    print("\n{:<8} {:<12} {:<35} {:<12}".format(
-        "ID", "Número", "Morada", "NIF"
-    ))
-    print("-" * 70)
-    for id_supermercado, dados in supermercados.items():
-        print("{:<8} {:<12} {:<35} {:<12}".format(
-            id_supermercado,
-            dados["numero"],
-            dados["morada"],
-            dados["nif"]
-        ))
-    return 200, ""
+    def _construir_campos(self, frame):
+        self._campo_numero = CampoForm(frame, "Número")
+        self._campo_numero.pack(fill="x", pady=6)
 
+        self._campo_morada = CampoForm(frame, "Morada")
+        self._campo_morada.pack(fill="x", pady=6)
 
-# READ (consultar individual)
-def consultar_supermercado(id_supermercado):
-    if id_supermercado not in supermercados:
-        return 404, f"supermercado '{id_supermercado}' não encontrado."
+        self._campo_nif    = CampoForm(frame, "NIF",
+                                       placeholder="9 dígitos")
+        self._campo_nif.pack(fill="x", pady=6)
 
-    dados = supermercados[id_supermercado]
-    print(f"\n--- Supermercado ---")
-    print(f"ID:      {id_supermercado}")
-    print(f"Número:  {dados['numero']}")
-    print(f"Morada:  {dados['morada']}")
-    print(f"NIF:     {dados['nif']}")
-    return 200, ""
+    def _carregar_tabela(self, termo=""):
+        from supermercado import supermercados, carregar_supermercado
 
+        carregar_supermercado()
 
-# UPDATE
-def atualizar_supermercado(id_supermercado, numero=None, morada=None, nif=None):
-    if id_supermercado not in supermercados:
-        return 404, f"supermercado '{id_supermercado}' não encontrado."
+        fonte = {
+            sid: d for sid, d in supermercados.items()
+            if not termo or termo.lower() in d["morada"].lower()
+               or termo.lower() in d["numero"].lower()
+               or termo in d["nif"]
+        }
 
-    if numero is not None:
-        if not numero.strip():
-            return 400, "o número não pode estar vazio."
-        for sid, dados in supermercados.items():
-            if sid != id_supermercado and dados["numero"].lower() == numero.strip().lower():
-                return 409, f"já existe um supermercado com o número '{numero}'."
-        supermercados[id_supermercado]["numero"] = numero.strip()
+        linhas = [
+            (sid, d["numero"], d["morada"], d["nif"])
+            for sid, d in fonte.items()
+        ]
+        self._tabela.preencher(linhas)
 
-    if morada is not None:
-        if not morada.strip():
-            return 400, "a morada não pode estar vazia."
-        supermercados[id_supermercado]["morada"] = morada.strip()
+    def _guardar(self):
+        from supermercado import criar_supermercado, atualizar_supermercado
 
-    if nif is not None:
-        if not validar_nif(nif):
-            return 400, "NIF inválido. O NIF deve ter exactamente 9 dígitos numéricos."
-        for sid, dados in supermercados.items():
-            if sid != id_supermercado and dados["nif"] == nif.strip():
-                return 409, f"já existe um supermercado com o NIF '{nif}'."
-        supermercados[id_supermercado]["nif"] = nif.strip()
+        numero = self._campo_numero.get()
+        morada = self._campo_morada.get()
+        nif    = self._campo_nif.get()
 
-    return 200, "supermercado atualizado com sucesso."
+        if self._id_seleccionado:
+            codigo, resultado = atualizar_supermercado(
+                self._id_seleccionado, numero=numero, morada=morada, nif=nif)
+        else:
+            codigo, resultado = criar_supermercado(numero, morada, nif)
 
+        if codigo in (200, 201):
+            self._feedback.sucesso(
+                f"Supermercado {'atualizado' if self._id_seleccionado else 'criado'} com sucesso.")
+            self._fechar_painel()
+            self._carregar_tabela()
+        else:
+            self._feedback_form.erro(resultado)
 
-# DELETE
-def remover_supermercado(id_supermercado):
-    if id_supermercado not in supermercados:
-        return 404, f"supermercado '{id_supermercado}' não encontrado."
+    def _remover(self):
+        from supermercado import remover_supermercado
 
-    from compra import compras
-    for dados_compra in compras.values():
-        if dados_compra["id_supermercado"] == id_supermercado:
-            return 409, f"não é possível remover o supermercado '{id_supermercado}' porque tem compras associadas."
+        codigo, resultado = remover_supermercado(self._id_seleccionado)
+        if codigo == 200:
+            self._feedback.sucesso("Supermercado removido com sucesso.")
+            self._fechar_painel()
+            self._carregar_tabela()
+        else:
+            self._feedback.erro(resultado)
 
-    del supermercados[id_supermercado]
-    return 200, "supermercado removido com sucesso."
+    def _preencher_campos(self, valores):
+        self._campo_numero.set(valores[1])
+        self._campo_morada.set(valores[2])
+        self._campo_nif.set(valores[3])
 
-
-def supermercado_existe(id_supermercado):
-    """Verifica se um supermercado existe. Usada por compra.py."""
-    return id_supermercado in supermercados
+    def _limpar_campos(self):
+        self._campo_numero.limpar()
+        self._campo_morada.limpar()
+        self._campo_nif.limpar()
