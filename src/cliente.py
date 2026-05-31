@@ -1,152 +1,108 @@
 # ==============================
-# cliente.py
-# CRUD simples para entidade Cliente
-# SEM utilização de classes
-# armazenamento em dicionário
-# validações feitas aqui (não no main)
+# ui/paginas/clientes.py
 # ==============================
 
-from utils import gerar_id_cliente, validar_contacto, validar_email, validar_nif
-
-clientes = {}
-
-
-# CREATE
-def criar_cliente(nome, contacto, email="", nif=""):
-    if not nome.strip():
-        return 400, "o nome do cliente não pode estar vazio."
-
-    if not validar_contacto(contacto):
-        return 400, "contacto inválido. Introduza um número de telefone com 9 dígitos."
-
-    if email.strip() and not validar_email(email):
-        return 400, "email inválido. Introduza um endereço de email válido (ex: nome@dominio.pt)."
-
-    if nif.strip() and not validar_nif(nif):
-        return 400, "NIF inválido. O NIF deve ter exactamente 9 dígitos numéricos."
-
-    if nif.strip():
-        for dados in clientes.values():
-            if dados["nif"] == nif.strip():
-                return 409, f"já existe um cliente com o NIF '{nif}'."
-
-    id_cliente = gerar_id_cliente()
-    clientes[id_cliente] = {
-        "nome": nome.strip(),
-        "contacto": contacto.strip(),
-        "email": email.strip(),
-        "nif": nif.strip()
-    }
-    return 201, f"Cliente criado com sucesso. ID: {id_cliente}"
+import tkinter as tk
+from ui.paginas.base import PaginaBase
+from ui.widgets import CampoForm
 
 
-# READ (listar todos)
-def listar_clientes():
-    if not clientes:
-        return 404, "não existem clientes registados."
+class PaginaClientes(PaginaBase):
+    TITULO  = "Clientes"
+    COLUNAS = [
+        ("id",       "ID",       70),
+        ("nome",     "Nome",     200),
+        ("contacto", "Contacto", 110),
+        ("email",    "Email",    200),
+        ("nif",      "NIF",      100),
+    ]
 
-    print("\n{:<8} {:<25} {:<12} {:<25} {:<12}".format(
-        "ID", "Nome", "Contacto", "Email", "NIF"
-    ))
-    print("-" * 85)
-    for id_cliente, dados in clientes.items():
-        print("{:<8} {:<25} {:<12} {:<25} {:<12}".format(
-            id_cliente,
-            dados["nome"],
-            dados["contacto"],
-            dados["email"] if dados["email"] else "-",
-            dados["nif"] if dados["nif"] else "-"
-        ))
-    return 200, ""
+    # ── Campos do formulário ─────────────────────────────
+    def _construir_campos(self, frame):
+        self._campo_nome     = CampoForm(frame, "Nome")
+        self._campo_nome.pack(fill="x", pady=6)
 
+        self._campo_contacto = CampoForm(frame, "Contacto",
+                                         placeholder="ex: 912345678")
+        self._campo_contacto.pack(fill="x", pady=6)
 
-# READ (consultar individual)
-def consultar_cliente(id_cliente):
-    if id_cliente not in clientes:
-        return 404, f"cliente '{id_cliente}' não encontrado."
+        self._campo_email    = CampoForm(frame, "Email", obrigatorio=False,
+                                         placeholder="ex: nome@dominio.pt")
+        self._campo_email.pack(fill="x", pady=6)
 
-    dados = clientes[id_cliente]
-    print(f"\n--- Cliente ---")
-    print(f"ID:        {id_cliente}")
-    print(f"Nome:      {dados['nome']}")
-    print(f"Contacto:  {dados['contacto']}")
-    print(f"Email:     {dados['email'] if dados['email'] else '-'}")
-    print(f"NIF:       {dados['nif'] if dados['nif'] else '-'}")
-    return 200, ""
+        self._campo_nif      = CampoForm(frame, "NIF", obrigatorio=False,
+                                         placeholder="9 dígitos")
+        self._campo_nif.pack(fill="x", pady=6)
 
+    # ── Tabela ───────────────────────────────────────────
+    def _carregar_tabela(self, termo=""):
+        from cliente import listar_clientes, pesquisar_cliente, clientes, carregar_clientes
 
-# READ (pesquisar por nome ou NIF)
-def pesquisar_cliente(termo):
-    termo = termo.strip().lower()
-    encontrados = {
-        cid: d for cid, d in clientes.items()
-        if termo in d["nome"].lower() or termo == d["nif"]
-    }
+        carregar_clientes()
 
-    if not encontrados:
-        return 404, f"nenhum cliente encontrado com o termo '{termo}'."
+        if termo:
+            codigo, dados = pesquisar_cliente(termo)
+            fonte = dados if codigo == 200 else {}
+        else:
+            fonte = clientes
 
-    print("\n{:<8} {:<25} {:<12} {:<25} {:<12}".format(
-        "ID", "Nome", "Contacto", "Email", "NIF"
-    ))
-    print("-" * 85)
-    for id_cliente, dados in encontrados.items():
-        print("{:<8} {:<25} {:<12} {:<25} {:<12}".format(
-            id_cliente,
-            dados["nome"],
-            dados["contacto"],
-            dados["email"] if dados["email"] else "-",
-            dados["nif"] if dados["nif"] else "-"
-        ))
-    return 200, ""
+        linhas = [
+            (cid,
+             d["nome"],
+             d["contacto"],
+             d["email"] or "—",
+             d["nif"]   or "—")
+            for cid, d in fonte.items()
+        ]
+        self._tabela.preencher(linhas)
 
+    # ── Guardar ──────────────────────────────────────────
+    def _guardar(self):
+        from cliente import criar_cliente, atualizar_cliente
 
-# UPDATE
-def atualizar_cliente(id_cliente, nome=None, contacto=None, email=None, nif=None):
-    if id_cliente not in clientes:
-        return 404, f"cliente '{id_cliente}' não encontrado."
+        nome     = self._campo_nome.get()
+        contacto = self._campo_contacto.get()
+        email    = self._campo_email.get()
+        nif      = self._campo_nif.get()
 
-    if nome is not None:
-        if not nome.strip():
-            return 400, "o nome não pode estar vazio."
-        clientes[id_cliente]["nome"] = nome.strip()
+        if self._id_seleccionado:
+            codigo, resultado = atualizar_cliente(
+                self._id_seleccionado,
+                nome=nome, contacto=contacto, email=email, nif=nif,
+            )
+        else:
+            codigo, resultado = criar_cliente(nome, contacto, email, nif)
 
-    if contacto is not None:
-        if not validar_contacto(contacto):
-            return 400, "contacto inválido. Introduza um número de telefone com 9 dígitos."
-        clientes[id_cliente]["contacto"] = contacto.strip()
+        if codigo in (200, 201):
+            self._feedback.sucesso(
+                f"Cliente {'atualizado' if self._id_seleccionado else 'criado'} com sucesso.")
+            self._fechar_painel()
+            self._carregar_tabela()
+        else:
+            self._feedback_form.erro(resultado)
 
-    if email is not None:
-        if email.strip() and not validar_email(email):
-            return 400, "email inválido."
-        clientes[id_cliente]["email"] = email.strip()
+    # ── Remover ──────────────────────────────────────────
+    def _remover(self):
+        from cliente import remover_cliente
 
-    if nif is not None:
-        if nif.strip() and not validar_nif(nif):
-            return 400, "NIF inválido. O NIF deve ter exactamente 9 dígitos numéricos."
-        if nif.strip():
-            for cid, dados in clientes.items():
-                if cid != id_cliente and dados["nif"] == nif.strip():
-                    return 409, f"já existe um cliente com o NIF '{nif}'."
-        clientes[id_cliente]["nif"] = nif.strip()
+        codigo, resultado = remover_cliente(self._id_seleccionado)
+        if codigo == 200:
+            self._feedback.sucesso("Cliente removido com sucesso.")
+            self._fechar_painel()
+            self._carregar_tabela()
+        else:
+            self._feedback.erro(resultado)
 
-    return 200, "cliente atualizado com sucesso."
+    # ── Preencher / limpar campos ────────────────────────
+    def _preencher_campos(self, valores):
+        # valores = (id, nome, contacto, email, nif)
+        self._campo_nome.set(valores[1])
+        self._campo_contacto.set(valores[2])
+        self._campo_email.set(valores[3] if valores[3] != "—" else "")
+        self._campo_nif.set(valores[4]   if valores[4] != "—" else "")
 
-
-# DELETE
-def remover_cliente(id_cliente):
-    if id_cliente not in clientes:
-        return 404, f"cliente '{id_cliente}' não encontrado."
-
-    from compra import compras
-    for dados_compra in compras.values():
-        if dados_compra["id_cliente"] == id_cliente:
-            return 409, f"não é possível remover o cliente '{id_cliente}' porque tem compras associadas."
-
-    del clientes[id_cliente]
-    return 200, "cliente removido com sucesso."
-
-
-def cliente_existe(id_cliente):
-    """Verifica se um cliente existe. Usada por compra.py."""
-    return id_cliente in clientes
+    def _limpar_campos(self):
+        self._campo_nome.limpar()
+        self._campo_contacto.limpar()
+        self._campo_email.limpar()
+        self._campo_nif.limpar()
