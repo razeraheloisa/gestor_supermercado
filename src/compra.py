@@ -1,181 +1,195 @@
 # ==============================
-# compra.py
-# CRUD simples para entidade Compra
-# SEM utilização de classes
-# armazenamento em dicionário
-# validações feitas aqui (não no main)
+# ui/paginas/compras.py
 # ==============================
 
-from utils import gerar_id_compra, validar_preco, validar_data
-
-compras = {}
-
-
-# CREATE
-def criar_compra(id_cliente, id_supermercado, data, valor_total_texto):
-    from cliente import cliente_existe
-    from supermercado import supermercado_existe
-
-    if not cliente_existe(id_cliente):
-        return 404, f"cliente '{id_cliente}' não encontrado."
-
-    if not supermercado_existe(id_supermercado):
-        return 404, f"supermercado '{id_supermercado}' não encontrado."
-
-    if not validar_data(data):
-        return 400, "data inválida. Utilize o formato DD/MM/AAAA (ex: 25/04/2025)."
-
-    if not validar_preco(valor_total_texto):
-        return 400, "valor total inválido. Introduza um número positivo (ex: 15.99)."
-
-    id_compra = gerar_id_compra()
-    compras[id_compra] = {
-        "id_cliente": id_cliente,
-        "id_supermercado": id_supermercado,
-        "data": data.strip(),
-        "valor_total": float(valor_total_texto)
-    }
-    return 201, f"Compra registada com sucesso. ID: {id_compra}"
+import tkinter as tk
+from tkinter import ttk
+from ui.paginas.base import PaginaBase
+from ui.widgets import CampoForm
+from ui.theme import FONTE_NEGRITO, FONTE_NORMAL, FONTE_PEQUENA, COR_BRANCO, COR_PERIGO
 
 
-# READ (listar todas)
-def listar_compras():
-    from cliente import clientes
-    from supermercado import supermercados
+class PaginaCompras(PaginaBase):
+    TITULO  = "Compras"
+    COLUNAS = [
+        ("id",          "ID",           70),
+        ("cliente",     "Cliente",      160),
+        ("supermercado","Supermercado", 180),
+        ("data",        "Data",         100),
+        ("valor",       "Valor (€)",    90),
+    ]
 
-    if not compras:
-        return 404, "não existem compras registadas."
+    def _construir_campos(self, frame):
+        # Dropdown: cliente
+        self._var_cliente = tk.StringVar()
+        self._mapa_clientes = {}
+        self._combo_cliente, self._lbl_err_cli = self._dropdown(
+            frame, "Cliente", self._var_cliente)
 
-    print("\n{:<8} {:<8} {:<25} {:<8} {:<35} {:<12}".format(
-        "ID", "Cliente", "Nome Cliente", "Superm.", "Morada Supermercado", "Valor (€)"
-    ))
-    print("-" * 100)
-    for id_compra, dados in compras.items():
-        nome_cliente = clientes.get(dados["id_cliente"], {}).get("nome", "?")
-        morada_super = supermercados.get(dados["id_supermercado"], {}).get("morada", "?")
-        print("{:<8} {:<8} {:<25} {:<8} {:<35} {:<10.2f}  {}".format(
-            id_compra,
-            dados["id_cliente"],
-            nome_cliente,
-            dados["id_supermercado"],
-            morada_super,
-            dados["valor_total"],
-            dados["data"]
-        ))
-    return 200, ""
+        # Dropdown: supermercado
+        self._var_super = tk.StringVar()
+        self._mapa_super = {}
+        self._combo_super, self._lbl_err_sup = self._dropdown(
+            frame, "Supermercado", self._var_super)
 
+        # Data e valor
+        self._campo_data  = CampoForm(frame, "Data",
+                                       placeholder="DD/MM/AAAA")
+        self._campo_data.pack(fill="x", pady=6)
 
-# READ (listar compras de um cliente)
-def listar_compras_por_cliente(id_cliente):
-    from cliente import cliente_existe, clientes
-    from supermercado import supermercados
+        self._campo_valor = CampoForm(frame, "Valor total (€)",
+                                      placeholder="ex: 24.90")
+        self._campo_valor.pack(fill="x", pady=6)
 
-    if not cliente_existe(id_cliente):
-        return 404, f"cliente '{id_cliente}' não encontrado."
+        self._recarregar_dropdowns()
 
-    nome_cliente = clientes[id_cliente]["nome"]
-    encontradas = {cid: d for cid, d in compras.items() if d["id_cliente"] == id_cliente}
+    def _dropdown(self, frame, titulo, var):
+        lbl_f = tk.Frame(frame, bg=COR_BRANCO)
+        lbl_f.pack(fill="x", pady=(6, 0))
+        tk.Label(lbl_f, text=f"{titulo} *", font=FONTE_NEGRITO,
+                 bg=COR_BRANCO).pack(side="left")
 
-    if not encontradas:
-        return 404, f"o cliente '{nome_cliente}' não tem compras registadas."
+        combo = ttk.Combobox(frame, textvariable=var,
+                             font=FONTE_NORMAL, state="readonly")
+        combo.pack(fill="x", pady=(4, 0), ipady=4)
 
-    print(f"\n--- Compras do cliente: {nome_cliente} ({id_cliente}) ---")
-    print("\n{:<8} {:<8} {:<35} {:<12} {:<12}".format(
-        "ID", "Superm.", "Morada", "Data", "Valor (€)"
-    ))
-    print("-" * 78)
-    for id_compra, dados in encontradas.items():
-        morada_super = supermercados.get(dados["id_supermercado"], {}).get("morada", "?")
-        print("{:<8} {:<8} {:<35} {:<12} {:<10.2f}".format(
-            id_compra,
-            dados["id_supermercado"],
-            morada_super,
-            dados["data"],
-            dados["valor_total"]
-        ))
-    return 200, ""
+        lbl_err = tk.Label(frame, text="", foreground=COR_PERIGO,
+                           font=FONTE_PEQUENA, bg=COR_BRANCO)
+        lbl_err.pack(fill="x")
+        return combo, lbl_err
 
+    def _recarregar_dropdowns(self):
+        from cliente      import clientes,      carregar_clientes
+        from supermercado import supermercados,  carregar_supermercado
 
-# READ (listar compras de um supermercado)
-def listar_compras_por_supermercado(id_supermercado):
-    from supermercado import supermercado_existe, supermercados
-    from cliente import clientes
+        carregar_clientes()
+        carregar_supermercado()
 
-    if not supermercado_existe(id_supermercado):
-        return 404, f"supermercado '{id_supermercado}' não encontrado."
+        self._mapa_clientes = {
+            f"{cid} – {d['nome']}": cid for cid, d in clientes.items()
+        }
+        self._mapa_super = {
+            f"{sid} – {d['morada']}": sid for sid, d in supermercados.items()
+        }
 
-    morada = supermercados[id_supermercado]["morada"]
-    encontradas = {cid: d for cid, d in compras.items() if d["id_supermercado"] == id_supermercado}
+        self._combo_cliente["values"] = list(self._mapa_clientes.keys())
+        self._combo_super["values"]   = list(self._mapa_super.keys())
 
-    if not encontradas:
-        return 404, f"o supermercado '{morada}' não tem compras registadas."
+    def _carregar_tabela(self, termo=""):
+        from compra       import compras,        carregar_compras
+        from cliente      import clientes,       carregar_clientes
+        from supermercado import supermercados,   carregar_supermercado
 
-    print(f"\n--- Compras no supermercado: {morada} ({id_supermercado}) ---")
-    print("\n{:<8} {:<8} {:<25} {:<12} {:<12}".format(
-        "ID", "Cliente", "Nome Cliente", "Data", "Valor (€)"
-    ))
-    print("-" * 70)
-    for id_compra, dados in encontradas.items():
-        nome_cliente = clientes.get(dados["id_cliente"], {}).get("nome", "?")
-        print("{:<8} {:<8} {:<25} {:<12} {:<10.2f}".format(
-            id_compra,
-            dados["id_cliente"],
-            nome_cliente,
-            dados["data"],
-            dados["valor_total"]
-        ))
-    return 200, ""
+        carregar_compras()
+        carregar_clientes()
+        carregar_supermercado()
 
+        fonte = {
+            cid: d for cid, d in compras.items()
+            if not termo
+               or termo.lower() in clientes.get(d["id_cliente"], {}).get("nome", "").lower()
+               or termo.lower() in supermercados.get(d["id_supermercado"], {}).get("morada", "").lower()
+        }
 
-# READ (consultar individual)
-def consultar_compra(id_compra):
-    from cliente import clientes
-    from supermercado import supermercados
+        linhas = [
+            (cid,
+             clientes.get(d["id_cliente"], {}).get("nome", "?"),
+             supermercados.get(d["id_supermercado"], {}).get("morada", "?"),
+             d["data"],
+             f"{d['valor_total']:.2f}")
+            for cid, d in fonte.items()
+        ]
+        self._tabela.preencher(linhas)
 
-    if id_compra not in compras:
-        return 404, f"compra '{id_compra}' não encontrada."
+    def _guardar(self):
+        from compra import criar_compra, atualizar_compra
 
-    dados = compras[id_compra]
-    nome_cliente = clientes.get(dados["id_cliente"], {}).get("nome", "?")
-    morada_super = supermercados.get(dados["id_supermercado"], {}).get("morada", "?")
-    nif_super = supermercados.get(dados["id_supermercado"], {}).get("nif", "?")
+        cli_label = self._var_cliente.get()
+        sup_label = self._var_super.get()
+        data      = self._campo_data.get()
+        valor     = self._campo_valor.get()
 
-    print(f"\n--- Compra ---")
-    print(f"ID Compra:       {id_compra}")
-    print(f"Cliente:         {nome_cliente} ({dados['id_cliente']})")
-    print(f"Supermercado:    {morada_super} | NIF: {nif_super} ({dados['id_supermercado']})")
-    print(f"Data:            {dados['data']}")
-    print(f"Valor Total:     {dados['valor_total']:.2f} €")
-    return 200, ""
+        valido = True
+        if not cli_label:
+            self._lbl_err_cli.config(text="  ✖  Seleccione um cliente.")
+            valido = False
+        else:
+            self._lbl_err_cli.config(text="")
 
+        if not sup_label:
+            self._lbl_err_sup.config(text="  ✖  Seleccione um supermercado.")
+            valido = False
+        else:
+            self._lbl_err_sup.config(text="")
 
-# UPDATE
-def atualizar_compra(id_compra, data=None, valor_total_texto=None):
-    if id_compra not in compras:
-        return 404, f"compra '{id_compra}' não encontrada."
+        if not valido:
+            return
 
-    if data is not None:
-        if not validar_data(data):
-            return 400, "data inválida. Utilize o formato DD/MM/AAAA."
-        compras[id_compra]["data"] = data.strip()
+        id_cli = self._mapa_clientes.get(cli_label, "")
+        id_sup = self._mapa_super.get(sup_label, "")
 
-    if valor_total_texto is not None:
-        if not validar_preco(valor_total_texto):
-            return 400, "valor total inválido. Introduza um número positivo."
-        compras[id_compra]["valor_total"] = float(valor_total_texto)
+        if self._id_seleccionado:
+            codigo, resultado = atualizar_compra(
+                self._id_seleccionado, data=data, valor_total_texto=valor)
+        else:
+            codigo, resultado = criar_compra(id_cli, id_sup, data, valor)
 
-    return 200, "compra atualizada com sucesso."
+        if codigo in (200, 201):
+            self._feedback.sucesso(
+                f"Compra {'atualizada' if self._id_seleccionado else 'registada'} com sucesso.")
+            self._fechar_painel()
+            self._carregar_tabela()
+        else:
+            self._feedback_form.erro(resultado)
 
+    def _remover(self):
+        from compra import remover_compra
 
-# DELETE
-def remover_compra(id_compra):
-    if id_compra not in compras:
-        return 404, f"compra '{id_compra}' não encontrada."
+        codigo, resultado = remover_compra(self._id_seleccionado)
+        if codigo == 200:
+            self._feedback.sucesso("Compra removida com sucesso.")
+            self._fechar_painel()
+            self._carregar_tabela()
+        else:
+            self._feedback.erro(resultado)
 
-    del compras[id_compra]
-    return 200, "compra removida com sucesso."
+    def _preencher_campos(self, valores):
+        # valores = (id, nome_cliente, morada_super, data, valor)
+        from compra       import compras,        carregar_compras
+        from cliente      import clientes,       carregar_clientes
+        from supermercado import supermercados,   carregar_supermercado
 
+        carregar_compras()
+        self._recarregar_dropdowns()
 
-def compra_existe(id_compra):
-    """Verifica se uma compra existe."""
-    return id_compra in compras
+        cid = valores[0]
+        dados = compras.get(cid, {})
+
+        # Seleccionar cliente no dropdown
+        id_cli = dados.get("id_cliente", "")
+        for label, cid_val in self._mapa_clientes.items():
+            if cid_val == id_cli:
+                self._var_cliente.set(label)
+                break
+
+        # Seleccionar supermercado no dropdown
+        id_sup = dados.get("id_supermercado", "")
+        for label, sid_val in self._mapa_super.items():
+            if sid_val == id_sup:
+                self._var_super.set(label)
+                break
+
+        self._campo_data.set(dados.get("data", ""))
+        self._campo_valor.set(str(dados.get("valor_total", "")))
+
+    def _limpar_campos(self):
+        self._var_cliente.set("")
+        self._var_super.set("")
+        self._campo_data.limpar()
+        self._campo_valor.limpar()
+        self._lbl_err_cli.config(text="")
+        self._lbl_err_sup.config(text="")
+        self._recarregar_dropdowns()
+
+    def ao_mostrar(self):
+        super().ao_mostrar()
