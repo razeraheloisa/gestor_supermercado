@@ -1,108 +1,134 @@
-# ==============================
-# ui/paginas/clientes.py
-# ==============================
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 import tkinter as tk
-from ui.paginas.base import PaginaBase
-from ui.widgets import CampoForm
+from tkinter import ttk
+from ui.widgets import CampoForm, BotaoPrimario, BotaoPerigo, Tabela, MensagemFeedback, DialogoConfirmacao, BarraPesquisa
+import cliente
 
+class PaginaClientes(ttk.Frame):
+    def __init__(self, parent):
+        super().__init__(parent, style="TFrame")
 
-class PaginaClientes(PaginaBase):
-    TITULO  = "Clientes"
-    COLUNAS = [
-        ("id",       "ID",       70),
-        ("nome",     "Nome",     200),
-        ("contacto", "Contacto", 110),
-        ("email",    "Email",    200),
-        ("nif",      "NIF",      100),
-    ]
+        topo = ttk.Frame(self, style="TFrame")
+        topo.pack(fill="x", padx=30, pady=20)
+        ttk.Label(topo, text="Gestão de Clientes", style="Titulo.TLabel").pack(side="left")
+        self.feedback = MensagemFeedback(topo)
+        self.feedback.pack(side="right", padx=10)
 
-    # ── Campos do formulário ─────────────────────────────
-    def _construir_campos(self, frame):
-        self._campo_nome     = CampoForm(frame, "Nome")
-        self._campo_nome.pack(fill="x", pady=6)
+        corpo = ttk.Frame(self, style="TFrame")
+        corpo.pack(fill="both", expand=True, padx=30, pady=10)
 
-        self._campo_contacto = CampoForm(frame, "Contacto",
-                                         placeholder="ex: 912345678")
-        self._campo_contacto.pack(fill="x", pady=6)
+        self.frame_form = ttk.LabelFrame(corpo, text=" Ficha de Cliente ", style="TFrame", padding=15)
+        self.frame_form.pack(side="left", fill="y", padx=(0, 20))
 
-        self._campo_email    = CampoForm(frame, "Email", obrigatorio=False,
-                                         placeholder="ex: nome@dominio.pt")
-        self._campo_email.pack(fill="x", pady=6)
+        self.txt_id = CampoForm(self.frame_form, label="ID Cliente", obrigatorio=False)
+        self.txt_id._entry.config(state="disabled")
+        self.txt_id.pack(fill="x", pady=2)
 
-        self._campo_nif      = CampoForm(frame, "NIF", obrigatorio=False,
-                                         placeholder="9 dígitos")
-        self._campo_nif.pack(fill="x", pady=6)
+        self.txt_nome = CampoForm(self.frame_form, label="Nome Completo")
+        self.txt_nome.pack(fill="x", pady=2)
 
-    # ── Tabela ───────────────────────────────────────────
-    def _carregar_tabela(self, termo=""):
-        from cliente import listar_clientes, pesquisar_cliente, clientes, carregar_clientes
+        self.txt_contacto = CampoForm(self.frame_form, label="Contacto Telefónico", placeholder="9 dígitos")
+        self.txt_contacto.pack(fill="x", pady=2)
 
-        carregar_clientes()
+        self.txt_email = CampoForm(self.frame_form, label="E-mail", obrigatorio=False, placeholder="nome@provedor.pt")
+        self.txt_email.pack(fill="x", pady=2)
 
-        if termo:
-            codigo, dados = pesquisar_cliente(termo)
-            fonte = dados if codigo == 200 else {}
+        self.txt_nif = CampoForm(self.frame_form, label="NIF", obrigatorio=False, placeholder="9 dígitos fiscais")
+        self.txt_nif.pack(fill="x", pady=2)
+
+        btn_box = ttk.Frame(self.frame_form, style="TFrame")
+        btn_box.pack(fill="x", pady=10)
+        BotaoPrimario(btn_box, "Salvar", comando=self._submeter).pack(side="left", expand=True, fill="x", padx=2)
+        BotaoPerigo(btn_box, "Limpar", comando=self._limpar_formulario).pack(side="left", expand=True, fill="x", padx=2)
+
+        frame_tabela = ttk.Frame(corpo, style="TFrame")
+        frame_tabela.pack(side="right", fill="both", expand=True)
+
+        # Barra de Pesquisa Dinâmica integrada à tabela (funciona via trace na variável)
+        self.pesquisa = BarraPesquisa(frame_tabela, placeholder="Filtrar por nome ou NIF...",
+                                      comando=self._filtrar_grid)
+        self.pesquisa.pack(fill="x", pady=(0, 10))
+
+        colunas = [("id", "ID", 70), ("nome", "Nome", 200), ("contacto", "Contacto", 100), ("email", "Email", 180),
+                   ("nif", "NIF", 100)]
+        self.tabela = Tabela(frame_tabela, colunas=colunas)
+        self.tabela.pack(fill="both", expand=True)
+        self.tabela.bind_duplo_clique(self._carregar_registo)
+
+        BotaoPerigo(frame_tabela, "Remover Cliente", comando=self._confirmar_remocao).pack(anchor="e", pady=10)
+
+        self._atualizar_grid()
+
+    def _atualizar_grid(self, dados_customizados=None):
+        dados_tabela = []
+        fonte = dados_customizados if dados_customizados is not None else cliente.clientes.items()
+        for cid, d in fonte:
+            dados_tabela.append((cid, d["nome"], d["contacto"], d["email"] or "-", d["nif"] or "-"))
+        self.tabela.preencher(dados_tabela)
+
+    def _filtrar_grid(self, termo):
+        if not termo.strip() or termo == "Filtrar por nome ou NIF...":
+            self._atualizar_grid()
+            return
+        termo = termo.lower()
+        filtrados = [(cid, d) for cid, d in cliente.clientes.items() if termo in d["nome"].lower() or termo == d["nif"]]
+        self._atualizar_grid(filtrados)
+
+    def _submeter(self):
+        id_atual = self.txt_id.get()
+        nome = self.txt_nome.get()
+        contacto = self.txt_contacto.get()
+        email = self.txt_email.get()
+        nif = self.txt_nif.get()
+
+        if id_atual == "":
+            status, msg = cliente.criar_cliente(nome, contacto, email, nif)
         else:
-            fonte = clientes
+            status, msg = cliente.atualizar_cliente(id_atual, nome, contacto, email, nif)
 
-        linhas = [
-            (cid,
-             d["nome"],
-             d["contacto"],
-             d["email"] or "—",
-             d["nif"]   or "—")
-            for cid, d in fonte.items()
-        ]
-        self._tabela.preencher(linhas)
-
-    # ── Guardar ──────────────────────────────────────────
-    def _guardar(self):
-        from cliente import criar_cliente, atualizar_cliente
-
-        nome     = self._campo_nome.get()
-        contacto = self._campo_contacto.get()
-        email    = self._campo_email.get()
-        nif      = self._campo_nif.get()
-
-        if self._id_seleccionado:
-            codigo, resultado = atualizar_cliente(
-                self._id_seleccionado,
-                nome=nome, contacto=contacto, email=email, nif=nif,
-            )
+        if status in (200, 201):
+            self.feedback.sucesso(msg)
+            self._limpar_formulario()
+            self._atualizar_grid()
         else:
-            codigo, resultado = criar_cliente(nome, contacto, email, nif)
+            self.feedback.erro(msg)
 
-        if codigo in (200, 201):
-            self._feedback.sucesso(
-                f"Cliente {'atualizado' if self._id_seleccionado else 'criado'} com sucesso.")
-            self._fechar_painel()
-            self._carregar_tabela()
+    def _carregar_registo(self):
+        sel = self.tabela.seleccionado()
+        if sel:
+            cid = sel[0]
+            d = cliente.clientes[cid]
+            self.txt_id._entry.config(state="normal")
+            self.txt_id.set(cid)
+            self.txt_id._entry.config(state="disabled")
+            self.txt_nome.set(d["nome"])
+            self.txt_contacto.set(d["contacto"])
+            self.txt_email.set(d["email"])
+            self.txt_nif.set(d["nif"])
+
+    def _confirmar_remocao(self):
+        sel = self.tabela.seleccionado()
+        if not sel: return
+        DialogoConfirmacao(self, "Remover Cliente", f"Remover o cliente {sel[1]}?",
+                           callback_sim=lambda: self._executar_remocao(sel[0]))
+
+    def _executar_remocao(self, cid):
+        status, msg = cliente.remover_cliente(cid)
+        if status == 200:
+            self.feedback.sucesso(msg)
+            self._limpar_formulario()
+            self._atualizar_grid()
         else:
-            self._feedback_form.erro(resultado)
+            self.feedback.erro(msg)
 
-    # ── Remover ──────────────────────────────────────────
-    def _remover(self):
-        from cliente import remover_cliente
-
-        codigo, resultado = remover_cliente(self._id_seleccionado)
-        if codigo == 200:
-            self._feedback.sucesso("Cliente removido com sucesso.")
-            self._fechar_painel()
-            self._carregar_tabela()
-        else:
-            self._feedback.erro(resultado)
-
-    # ── Preencher / limpar campos ────────────────────────
-    def _preencher_campos(self, valores):
-        # valores = (id, nome, contacto, email, nif)
-        self._campo_nome.set(valores[1])
-        self._campo_contacto.set(valores[2])
-        self._campo_email.set(valores[3] if valores[3] != "—" else "")
-        self._campo_nif.set(valores[4]   if valores[4] != "—" else "")
-
-    def _limpar_campos(self):
-        self._campo_nome.limpar()
-        self._campo_contacto.limpar()
-        self._campo_email.limpar()
-        self._campo_nif.limpar()
+    def _limpar_formulario(self):
+        self.txt_id._entry.config(state="normal")
+        self.txt_id.limpar()
+        self.txt_id._entry.config(state="disabled")
+        self.txt_nome.limpar()
+        self.txt_contacto.limpar()
+        self.txt_email.limpar()
+        self.txt_nif.limpar()
