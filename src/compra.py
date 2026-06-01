@@ -1,195 +1,147 @@
-# ==============================
-# ui/paginas/compras.py
-# ==============================
+import tkinter as tk
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 import tkinter as tk
 from tkinter import ttk
-from ui.paginas.base import PaginaBase
-from ui.widgets import CampoForm
-from ui.theme import FONTE_NEGRITO, FONTE_NORMAL, FONTE_PEQUENA, COR_BRANCO, COR_PERIGO
+from ui.widgets import CampoForm, BotaoPrimario, BotaoPerigo, Tabela, MensagemFeedback, DialogoConfirmacao
+import compra
+import cliente
+import supermercado
 
+class PaginaCompras(ttk.Frame):
+    def __init__(self, parent):
+        super().__init__(parent, style="TFrame")
 
-class PaginaCompras(PaginaBase):
-    TITULO  = "Compras"
-    COLUNAS = [
-        ("id",          "ID",           70),
-        ("cliente",     "Cliente",      160),
-        ("supermercado","Supermercado", 180),
-        ("data",        "Data",         100),
-        ("valor",       "Valor (€)",    90),
-    ]
+        topo = ttk.Frame(self, style="TFrame")
+        topo.pack(fill="x", padx=30, pady=20)
+        ttk.Label(topo, text="Registo de Compras", style="Titulo.TLabel").pack(side="left")
+        self.feedback = MensagemFeedback(topo)
+        self.feedback.pack(side="right", padx=10)
 
-    def _construir_campos(self, frame):
-        # Dropdown: cliente
-        self._var_cliente = tk.StringVar()
-        self._mapa_clientes = {}
-        self._combo_cliente, self._lbl_err_cli = self._dropdown(
-            frame, "Cliente", self._var_cliente)
+        corpo = ttk.Frame(self, style="TFrame")
+        corpo.pack(fill="both", expand=True, padx=30, pady=10)
 
-        # Dropdown: supermercado
-        self._var_super = tk.StringVar()
-        self._mapa_super = {}
-        self._combo_super, self._lbl_err_sup = self._dropdown(
-            frame, "Supermercado", self._var_super)
+        self.frame_form = ttk.LabelFrame(corpo, text=" Nova Compra ", style="TFrame", padding=15)
+        self.frame_form.pack(side="left", fill="y", padx=(0, 20))
 
-        # Data e valor
-        self._campo_data  = CampoForm(frame, "Data",
-                                       placeholder="DD/MM/AAAA")
-        self._campo_data.pack(fill="x", pady=6)
+        self.txt_id = CampoForm(self.frame_form, label="ID Compra", obrigatorio=False)
+        self.txt_id._entry.config(state="disabled")
+        self.txt_id.pack(fill="x", pady=2)
 
-        self._campo_valor = CampoForm(frame, "Valor total (€)",
-                                      placeholder="ex: 24.90")
-        self._campo_valor.pack(fill="x", pady=6)
+        # Dropdown Clientes
+        ttk.Label(self.frame_form, text="Cliente *", font=("Segoe UI", 10, "bold"), style="TLabel").pack(anchor="w",
+                                                                                                         pady=(4, 2))
+        self.cb_cliente = ttk.Combobox(self.frame_form, state="readonly", font=("Segoe UI", 10))
+        self.cb_cliente.pack(fill="x", ipady=4, pady=(0, 6))
 
-        self._recarregar_dropdowns()
+        # Dropdown Supermercados
+        ttk.Label(self.frame_form, text="Supermercado *", font=("Segoe UI", 10, "bold"), style="TLabel").pack(
+            anchor="w", pady=(4, 2))
+        self.cb_super = ttk.Combobox(self.frame_form, state="readonly", font=("Segoe UI", 10))
+        self.cb_super.pack(fill="x", ipady=4, pady=(0, 6))
 
-    def _dropdown(self, frame, titulo, var):
-        lbl_f = tk.Frame(frame, bg=COR_BRANCO)
-        lbl_f.pack(fill="x", pady=(6, 0))
-        tk.Label(lbl_f, text=f"{titulo} *", font=FONTE_NEGRITO,
-                 bg=COR_BRANCO).pack(side="left")
+        self._carregar_comboboxes()
 
-        combo = ttk.Combobox(frame, textvariable=var,
-                             font=FONTE_NORMAL, state="readonly")
-        combo.pack(fill="x", pady=(4, 0), ipady=4)
+        self.txt_data = CampoForm(self.frame_form, label="Data (DD/MM/AAAA)", placeholder="Ex: 25/04/2025")
+        self.txt_data.pack(fill="x", pady=2)
 
-        lbl_err = tk.Label(frame, text="", foreground=COR_PERIGO,
-                           font=FONTE_PEQUENA, bg=COR_BRANCO)
-        lbl_err.pack(fill="x")
-        return combo, lbl_err
+        self.txt_valor = CampoForm(self.frame_form, label="Valor Total (€)", placeholder="Ex: 45.90")
+        self.txt_valor.pack(fill="x", pady=2)
 
-    def _recarregar_dropdowns(self):
-        from cliente      import clientes,      carregar_clientes
-        from supermercado import supermercados,  carregar_supermercado
+        btn_box = ttk.Frame(self.frame_form, style="TFrame")
+        btn_box.pack(fill="x", pady=15)
+        BotaoPrimario(btn_box, "Registar", comando=self._submeter).pack(side="left", expand=True, fill="x", padx=2)
+        BotaoPerigo(btn_box, "Limpar", comando=self._limpar_formulario).pack(side="left", expand=True, fill="x", padx=2)
 
-        carregar_clientes()
-        carregar_supermercado()
+        # Tabela de Compras
+        frame_tabela = ttk.Frame(corpo, style="TFrame")
+        frame_tabela.pack(side="right", fill="both", expand=True)
 
-        self._mapa_clientes = {
-            f"{cid} – {d['nome']}": cid for cid, d in clientes.items()
-        }
-        self._mapa_super = {
-            f"{sid} – {d['morada']}": sid for sid, d in supermercados.items()
-        }
+        colunas = [("id", "ID Compra", 80), ("cliente", "Cliente", 180), ("super", "Supermercado", 180),
+                   ("data", "Data", 100), ("valor", "Valor total", 100)]
+        self.tabela = Tabela(frame_tabela, colunas=colunas)
+        self.tabela.pack(fill="both", expand=True)
+        self.tabela.bind_duplo_clique(self._carregar_registo)
 
-        self._combo_cliente["values"] = list(self._mapa_clientes.keys())
-        self._combo_super["values"]   = list(self._mapa_super.keys())
+        BotaoPerigo(frame_tabela, "Anular Compra", comando=self._confirmar_remocao).pack(anchor="e", pady=10)
 
-    def _carregar_tabela(self, termo=""):
-        from compra       import compras,        carregar_compras
-        from cliente      import clientes,       carregar_clientes
-        from supermercado import supermercados,   carregar_supermercado
+        self._atualizar_grid()
 
-        carregar_compras()
-        carregar_clientes()
-        carregar_supermercado()
+    def _carregar_comboboxes(self):
+        self.cb_cliente["values"] = [f"{cid} - {d['nome']}" for cid, d in cliente.clientes.items()]
+        self.cb_super["values"] = [f"{sid} - {d['morada']}" for sid, d in supermercado.supermercados.items()]
 
-        fonte = {
-            cid: d for cid, d in compras.items()
-            if not termo
-               or termo.lower() in clientes.get(d["id_cliente"], {}).get("nome", "").lower()
-               or termo.lower() in supermercados.get(d["id_supermercado"], {}).get("morada", "").lower()
-        }
+    def _atualizar_grid(self):
+        dados_tabela = []
+        for cmp_id, d in compra.compras.items():
+            nome_cli = cliente.clientes.get(d["id_cliente"], {}).get("nome", d["id_cliente"])
+            morada_sup = supermercado.supermercados.get(d["id_supermercado"], {}).get("morada", d["id_supermercado"])
+            dados_tabela.append((cmp_id, nome_cli, morada_sup, d["data"], f"{d['valor_total']:.2f} €"))
+        self.tabela.preencher(dados_tabela)
 
-        linhas = [
-            (cid,
-             clientes.get(d["id_cliente"], {}).get("nome", "?"),
-             supermercados.get(d["id_supermercado"], {}).get("morada", "?"),
-             d["data"],
-             f"{d['valor_total']:.2f}")
-            for cid, d in fonte.items()
-        ]
-        self._tabela.preencher(linhas)
+    def _submeter(self):
+        id_atual = self.txt_id.get()
+        data = self.txt_data.get()
+        valor = self.txt_valor.get()
 
-    def _guardar(self):
-        from compra import criar_compra, atualizar_compra
+        sel_cli = self.cb_cliente.get()
+        id_cli = sel_cli.split(" - ")[0] if sel_cli else ""
 
-        cli_label = self._var_cliente.get()
-        sup_label = self._var_super.get()
-        data      = self._campo_data.get()
-        valor     = self._campo_valor.get()
+        sel_sup = self.cb_super.get()
+        id_sup = sel_sup.split(" - ")[0] if sel_sup else ""
 
-        valido = True
-        if not cli_label:
-            self._lbl_err_cli.config(text="  ✖  Seleccione um cliente.")
-            valido = False
+        if id_atual == "":
+            status, msg = compra.criar_compra(id_cli, id_sup, data, valor)
         else:
-            self._lbl_err_cli.config(text="")
+            status, msg = compra.atualizar_compra(id_atual, data, valor)
 
-        if not sup_label:
-            self._lbl_err_sup.config(text="  ✖  Seleccione um supermercado.")
-            valido = False
+        if status in (200, 201):
+            self.feedback.sucesso(msg)
+            self._limpar_formulario()
+            self._atualizar_grid()
         else:
-            self._lbl_err_sup.config(text="")
+            self.feedback.erro(msg)
 
-        if not valido:
-            return
+    def _carregar_registo(self):
+        sel = self.tabela.seleccionado()
+        if sel:
+            cmp_id = sel[0]
+            d = compra.compras[cmp_id]
+            self.txt_id._entry.config(state="normal")
+            self.txt_id.set(cmp_id)
+            self.txt_id._entry.config(state="disabled")
+            self.txt_data.set(d["data"])
+            self.txt_valor.set(str(d["valor_total"]))
 
-        id_cli = self._mapa_clientes.get(cli_label, "")
-        id_sup = self._mapa_super.get(sup_label, "")
+            nome_cli = cliente.clientes.get(d["id_cliente"], {}).get("nome", "")
+            self.cb_cliente.set(f"{d['id_cliente']} - {nome_cli}" if nome_cli else d["id_cliente"])
 
-        if self._id_seleccionado:
-            codigo, resultado = atualizar_compra(
-                self._id_seleccionado, data=data, valor_total_texto=valor)
+            morada_sup = supermercado.supermercados.get(d["id_supermercado"], {}).get("morada", "")
+            self.cb_super.set(f"{d['id_supermercado']} - {morada_sup}" if morada_sup else d["id_supermercado"])
+
+    def _confirmar_remocao(self):
+        sel = self.tabela.seleccionado()
+        if not sel: return
+        DialogoConfirmacao(self, "Anular Compra", f"Deseja anular a compra {sel[0]}?",
+                           callback_sim=lambda: self._executar_remocao(sel[0]))
+
+    def _executar_remocao(self, cmp_id):
+        status, msg = compra.remover_compra(cmp_id)
+        if status == 200:
+            self.feedback.sucesso(msg)
+            self._limpar_formulario()
+            self._atualizar_grid()
         else:
-            codigo, resultado = criar_compra(id_cli, id_sup, data, valor)
+            self.feedback.erro(msg)
 
-        if codigo in (200, 201):
-            self._feedback.sucesso(
-                f"Compra {'atualizada' if self._id_seleccionado else 'registada'} com sucesso.")
-            self._fechar_painel()
-            self._carregar_tabela()
-        else:
-            self._feedback_form.erro(resultado)
-
-    def _remover(self):
-        from compra import remover_compra
-
-        codigo, resultado = remover_compra(self._id_seleccionado)
-        if codigo == 200:
-            self._feedback.sucesso("Compra removida com sucesso.")
-            self._fechar_painel()
-            self._carregar_tabela()
-        else:
-            self._feedback.erro(resultado)
-
-    def _preencher_campos(self, valores):
-        # valores = (id, nome_cliente, morada_super, data, valor)
-        from compra       import compras,        carregar_compras
-        from cliente      import clientes,       carregar_clientes
-        from supermercado import supermercados,   carregar_supermercado
-
-        carregar_compras()
-        self._recarregar_dropdowns()
-
-        cid = valores[0]
-        dados = compras.get(cid, {})
-
-        # Seleccionar cliente no dropdown
-        id_cli = dados.get("id_cliente", "")
-        for label, cid_val in self._mapa_clientes.items():
-            if cid_val == id_cli:
-                self._var_cliente.set(label)
-                break
-
-        # Seleccionar supermercado no dropdown
-        id_sup = dados.get("id_supermercado", "")
-        for label, sid_val in self._mapa_super.items():
-            if sid_val == id_sup:
-                self._var_super.set(label)
-                break
-
-        self._campo_data.set(dados.get("data", ""))
-        self._campo_valor.set(str(dados.get("valor_total", "")))
-
-    def _limpar_campos(self):
-        self._var_cliente.set("")
-        self._var_super.set("")
-        self._campo_data.limpar()
-        self._campo_valor.limpar()
-        self._lbl_err_cli.config(text="")
-        self._lbl_err_sup.config(text="")
-        self._recarregar_dropdowns()
-
-    def ao_mostrar(self):
-        super().ao_mostrar()
+    def _limpar_formulario(self):
+        self.txt_id._entry.config(state="normal")
+        self.txt_id.limpar()
+        self.txt_id._entry.config(state="disabled")
+        self.txt_data.limpar()
+        self.txt_valor.limpar()
+        self.cb_cliente.set("")
+        self.cb_super.set("")
+        self._carregar_comboboxes()
