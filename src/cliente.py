@@ -1,152 +1,134 @@
-# ==============================
-# cliente.py
-# CRUD simples para entidade Cliente
-# SEM utilização de classes
-# armazenamento em dicionário
-# validações feitas aqui (não no main)
-# ==============================
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
-from utils import gerar_id_cliente, validar_contacto, validar_email, validar_nif
+import tkinter as tk
+from tkinter import ttk
+from ui.widgets import CampoForm, BotaoPrimario, BotaoPerigo, Tabela, MensagemFeedback, DialogoConfirmacao, BarraPesquisa
+import cliente
 
-clientes = {}
+class PaginaClientes(ttk.Frame):
+    def __init__(self, parent):
+        super().__init__(parent, style="TFrame")
 
+        topo = ttk.Frame(self, style="TFrame")
+        topo.pack(fill="x", padx=30, pady=20)
+        ttk.Label(topo, text="Gestão de Clientes", style="Titulo.TLabel").pack(side="left")
+        self.feedback = MensagemFeedback(topo)
+        self.feedback.pack(side="right", padx=10)
 
-# CREATE
-def criar_cliente(nome, contacto, email="", nif=""):
-    if not nome.strip():
-        return 400, "o nome do cliente não pode estar vazio."
+        corpo = ttk.Frame(self, style="TFrame")
+        corpo.pack(fill="both", expand=True, padx=30, pady=10)
 
-    if not validar_contacto(contacto):
-        return 400, "contacto inválido. Introduza um número de telefone com 9 dígitos."
+        self.frame_form = ttk.LabelFrame(corpo, text=" Ficha de Cliente ", style="TFrame", padding=15)
+        self.frame_form.pack(side="left", fill="y", padx=(0, 20))
 
-    if email.strip() and not validar_email(email):
-        return 400, "email inválido. Introduza um endereço de email válido (ex: nome@dominio.pt)."
+        self.txt_id = CampoForm(self.frame_form, label="ID Cliente", obrigatorio=False)
+        self.txt_id._entry.config(state="disabled")
+        self.txt_id.pack(fill="x", pady=2)
 
-    if nif.strip() and not validar_nif(nif):
-        return 400, "NIF inválido. O NIF deve ter exactamente 9 dígitos numéricos."
+        self.txt_nome = CampoForm(self.frame_form, label="Nome Completo")
+        self.txt_nome.pack(fill="x", pady=2)
 
-    if nif.strip():
-        for dados in clientes.values():
-            if dados["nif"] == nif.strip():
-                return 409, f"já existe um cliente com o NIF '{nif}'."
+        self.txt_contacto = CampoForm(self.frame_form, label="Contacto Telefónico", placeholder="9 dígitos")
+        self.txt_contacto.pack(fill="x", pady=2)
 
-    id_cliente = gerar_id_cliente()
-    clientes[id_cliente] = {
-        "nome": nome.strip(),
-        "contacto": contacto.strip(),
-        "email": email.strip(),
-        "nif": nif.strip()
-    }
-    return 201, f"Cliente criado com sucesso. ID: {id_cliente}"
+        self.txt_email = CampoForm(self.frame_form, label="E-mail", obrigatorio=False, placeholder="nome@provedor.pt")
+        self.txt_email.pack(fill="x", pady=2)
 
+        self.txt_nif = CampoForm(self.frame_form, label="NIF", obrigatorio=False, placeholder="9 dígitos fiscais")
+        self.txt_nif.pack(fill="x", pady=2)
 
-# READ (listar todos)
-def listar_clientes():
-    if not clientes:
-        return 404, "não existem clientes registados."
+        btn_box = ttk.Frame(self.frame_form, style="TFrame")
+        btn_box.pack(fill="x", pady=10)
+        BotaoPrimario(btn_box, "Salvar", comando=self._submeter).pack(side="left", expand=True, fill="x", padx=2)
+        BotaoPerigo(btn_box, "Limpar", comando=self._limpar_formulario).pack(side="left", expand=True, fill="x", padx=2)
 
-    print("\n{:<8} {:<25} {:<12} {:<25} {:<12}".format(
-        "ID", "Nome", "Contacto", "Email", "NIF"
-    ))
-    print("-" * 85)
-    for id_cliente, dados in clientes.items():
-        print("{:<8} {:<25} {:<12} {:<25} {:<12}".format(
-            id_cliente,
-            dados["nome"],
-            dados["contacto"],
-            dados["email"] if dados["email"] else "-",
-            dados["nif"] if dados["nif"] else "-"
-        ))
-    return 200, ""
+        frame_tabela = ttk.Frame(corpo, style="TFrame")
+        frame_tabela.pack(side="right", fill="both", expand=True)
 
+        # Barra de Pesquisa Dinâmica integrada à tabela (funciona via trace na variável)
+        self.pesquisa = BarraPesquisa(frame_tabela, placeholder="Filtrar por nome ou NIF...",
+                                      comando=self._filtrar_grid)
+        self.pesquisa.pack(fill="x", pady=(0, 10))
 
-# READ (consultar individual)
-def consultar_cliente(id_cliente):
-    if id_cliente not in clientes:
-        return 404, f"cliente '{id_cliente}' não encontrado."
+        colunas = [("id", "ID", 70), ("nome", "Nome", 200), ("contacto", "Contacto", 100), ("email", "Email", 180),
+                   ("nif", "NIF", 100)]
+        self.tabela = Tabela(frame_tabela, colunas=colunas)
+        self.tabela.pack(fill="both", expand=True)
+        self.tabela.bind_duplo_clique(self._carregar_registo)
 
-    dados = clientes[id_cliente]
-    print(f"\n--- Cliente ---")
-    print(f"ID:        {id_cliente}")
-    print(f"Nome:      {dados['nome']}")
-    print(f"Contacto:  {dados['contacto']}")
-    print(f"Email:     {dados['email'] if dados['email'] else '-'}")
-    print(f"NIF:       {dados['nif'] if dados['nif'] else '-'}")
-    return 200, ""
+        BotaoPerigo(frame_tabela, "Remover Cliente", comando=self._confirmar_remocao).pack(anchor="e", pady=10)
 
+        self._atualizar_grid()
 
-# READ (pesquisar por nome ou NIF)
-def pesquisar_cliente(termo):
-    termo = termo.strip().lower()
-    encontrados = {
-        cid: d for cid, d in clientes.items()
-        if termo in d["nome"].lower() or termo == d["nif"]
-    }
+    def _atualizar_grid(self, dados_customizados=None):
+        dados_tabela = []
+        fonte = dados_customizados if dados_customizados is not None else cliente.clientes.items()
+        for cid, d in fonte:
+            dados_tabela.append((cid, d["nome"], d["contacto"], d["email"] or "-", d["nif"] or "-"))
+        self.tabela.preencher(dados_tabela)
 
-    if not encontrados:
-        return 404, f"nenhum cliente encontrado com o termo '{termo}'."
+    def _filtrar_grid(self, termo):
+        if not termo.strip() or termo == "Filtrar por nome ou NIF...":
+            self._atualizar_grid()
+            return
+        termo = termo.lower()
+        filtrados = [(cid, d) for cid, d in cliente.clientes.items() if termo in d["nome"].lower() or termo == d["nif"]]
+        self._atualizar_grid(filtrados)
 
-    print("\n{:<8} {:<25} {:<12} {:<25} {:<12}".format(
-        "ID", "Nome", "Contacto", "Email", "NIF"
-    ))
-    print("-" * 85)
-    for id_cliente, dados in encontrados.items():
-        print("{:<8} {:<25} {:<12} {:<25} {:<12}".format(
-            id_cliente,
-            dados["nome"],
-            dados["contacto"],
-            dados["email"] if dados["email"] else "-",
-            dados["nif"] if dados["nif"] else "-"
-        ))
-    return 200, ""
+    def _submeter(self):
+        id_atual = self.txt_id.get()
+        nome = self.txt_nome.get()
+        contacto = self.txt_contacto.get()
+        email = self.txt_email.get()
+        nif = self.txt_nif.get()
 
+        if id_atual == "":
+            status, msg = cliente.criar_cliente(nome, contacto, email, nif)
+        else:
+            status, msg = cliente.atualizar_cliente(id_atual, nome, contacto, email, nif)
 
-# UPDATE
-def atualizar_cliente(id_cliente, nome=None, contacto=None, email=None, nif=None):
-    if id_cliente not in clientes:
-        return 404, f"cliente '{id_cliente}' não encontrado."
+        if status in (200, 201):
+            self.feedback.sucesso(msg)
+            self._limpar_formulario()
+            self._atualizar_grid()
+        else:
+            self.feedback.erro(msg)
 
-    if nome is not None:
-        if not nome.strip():
-            return 400, "o nome não pode estar vazio."
-        clientes[id_cliente]["nome"] = nome.strip()
+    def _carregar_registo(self):
+        sel = self.tabela.seleccionado()
+        if sel:
+            cid = sel[0]
+            d = cliente.clientes[cid]
+            self.txt_id._entry.config(state="normal")
+            self.txt_id.set(cid)
+            self.txt_id._entry.config(state="disabled")
+            self.txt_nome.set(d["nome"])
+            self.txt_contacto.set(d["contacto"])
+            self.txt_email.set(d["email"])
+            self.txt_nif.set(d["nif"])
 
-    if contacto is not None:
-        if not validar_contacto(contacto):
-            return 400, "contacto inválido. Introduza um número de telefone com 9 dígitos."
-        clientes[id_cliente]["contacto"] = contacto.strip()
+    def _confirmar_remocao(self):
+        sel = self.tabela.seleccionado()
+        if not sel: return
+        DialogoConfirmacao(self, "Remover Cliente", f"Remover o cliente {sel[1]}?",
+                           callback_sim=lambda: self._executar_remocao(sel[0]))
 
-    if email is not None:
-        if email.strip() and not validar_email(email):
-            return 400, "email inválido."
-        clientes[id_cliente]["email"] = email.strip()
+    def _executar_remocao(self, cid):
+        status, msg = cliente.remover_cliente(cid)
+        if status == 200:
+            self.feedback.sucesso(msg)
+            self._limpar_formulario()
+            self._atualizar_grid()
+        else:
+            self.feedback.erro(msg)
 
-    if nif is not None:
-        if nif.strip() and not validar_nif(nif):
-            return 400, "NIF inválido. O NIF deve ter exactamente 9 dígitos numéricos."
-        if nif.strip():
-            for cid, dados in clientes.items():
-                if cid != id_cliente and dados["nif"] == nif.strip():
-                    return 409, f"já existe um cliente com o NIF '{nif}'."
-        clientes[id_cliente]["nif"] = nif.strip()
-
-    return 200, "cliente atualizado com sucesso."
-
-
-# DELETE
-def remover_cliente(id_cliente):
-    if id_cliente not in clientes:
-        return 404, f"cliente '{id_cliente}' não encontrado."
-
-    from compra import compras
-    for dados_compra in compras.values():
-        if dados_compra["id_cliente"] == id_cliente:
-            return 409, f"não é possível remover o cliente '{id_cliente}' porque tem compras associadas."
-
-    del clientes[id_cliente]
-    return 200, "cliente removido com sucesso."
-
-
-def cliente_existe(id_cliente):
-    """Verifica se um cliente existe. Usada por compra.py."""
-    return id_cliente in clientes
+    def _limpar_formulario(self):
+        self.txt_id._entry.config(state="normal")
+        self.txt_id.limpar()
+        self.txt_id._entry.config(state="disabled")
+        self.txt_nome.limpar()
+        self.txt_contacto.limpar()
+        self.txt_email.limpar()
+        self.txt_nif.limpar()
